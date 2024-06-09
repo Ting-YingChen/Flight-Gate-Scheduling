@@ -6,12 +6,12 @@ from gurobipy import Model, GRB, quicksum
 # Inputs
 ''' For now: change path of file here under'''
 ''' Later: put excels in same directory!!! '''
-flightCount = len(pd.read_excel('/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels_Clean.xlsm', sheet_name='EBBR - Flights', usecols='A:T', skiprows=2))
-flightsBrussels = pd.read_excel('/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels_Clean.xlsm', sheet_name='EBBR - Flights', usecols='A:T', skiprows=1, nrows=flightCount)
+flightCount = len(pd.read_excel('/Users/chentingying/Documents/tum/Ad_Se_Operation_Management/Airports_data/Brussels_Clean.xlsm', sheet_name='EBBR - Flights', usecols='A:T', skiprows=2))
+flightsBrussels = pd.read_excel('/Users/chentingying/Documents/tum/Ad_Se_Operation_Management/Airports_data/Brussels_Clean.xlsm', usecols='A:T', skiprows=1, nrows=flightCount)
 n = flightCount # Number of flights
 
-gateCount = len(pd.read_excel('/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels_Clean.xlsm', sheet_name='EBBR - Gates', usecols='A:D', skiprows=1))
-gatesBrussels = pd.read_excel('/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels_Clean.xlsm', sheet_name='EBBR - Gates', usecols='A:D', skiprows=0, nrows=gateCount)
+gateCount = len(pd.read_excel('/Users/chentingying/Documents/tum/Ad_Se_Operation_Management/Airports_data/Brussels_Clean.xlsm', sheet_name='EBBR - Gates', usecols='A:D', skiprows=1))
+gatesBrussels = pd.read_excel('/Users/chentingying/Documents/tum/Ad_Se_Operation_Management/Airports_data/Brussels_Clean.xlsm', sheet_name='EBBR - Gates', usecols='A:D', skiprows=0, nrows=gateCount)
 m = gateCount # Number of gates
 
 # Flight columns
