@@ -1,0 +1,5 @@
+__pycache__/
+.idea/
+*.pyc
+venv/
+*.DS_Store  # if you're using macOS, to ignore system files that might get added
