@@ -7,11 +7,6 @@ You can then cut off this solution by adding the constraint sum_((i,j): x_ij^* =
 where the latter expression is the number of nonzero variables in your current optimal solution.
 '''
 def add_lazy_shadow_constraints(model, where):
-
-
-    # Hello git
-
-    
     # checks if the callback is being called during the MIPSOL phase,
     # which is when a feasible integer solution is found.
     if where == GRB.Callback.MIPSOL:
