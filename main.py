@@ -1,10 +1,8 @@
-from gurobipy import GRB
-
-from Example_Input import flights, num_flights, gates, num_gates, T, P, U, M, alpha1, alpha2, alpha3, t_max, shadow_constraints
+from Example_Input import num_flights, num_gates, T, P, U, M, alpha1, alpha2, alpha3, t_max, shadow_constraints
 import Example_Input as ex
 import CPP_MIP as cpp
 # import FGS_MIP as fgs
-# import Heuristic
+import Heuristic
 
 def main():
     # Load and prepare data
@@ -19,18 +17,18 @@ def main():
     # CPP Model
     # Build the model and retrieve the solution and cluster assignments
     cpp_solution = cpp.build_cpp_model(vertices, weights, shadow_constraints)
-    print(cpp_solution) # why all 0???
+    # print(cpp_solution) # why all 0???
 
     # FGS MIP Model
 
 
     # Heuristic Model
-
+    heuristic_solution = Heuristic.iterative_gate_optimization(vertices, weights, U, M, P)
 
     # Print or process the solutions
     # print("CCP Solution:", ccp_solution)
     # print("FGS Solution:", fgs_solution)
-    # print("Heuristic Solution:", heuristic_solution)
+    print("Heuristic Solution:", heuristic_solution)
 
 if __name__ == "__main__":
     main()
