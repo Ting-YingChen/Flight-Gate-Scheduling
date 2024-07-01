@@ -53,16 +53,28 @@ def build_preferences_dict(flightsBrussels, Is_Int, Is_LowCost, Is_Close, Flight
             # for dummy gate: set preference to some large negative value
             if gate == "Dum":
                 P_preferences[flight][gate] = -1000
-            # for all other gates: get info on gate type (international, low cost) and assign respective preference
-            elif Is_Int[gate] == 1:
-                P_preferences[flight][gate] = flightsBrussels.loc[flight, "Pref. Int"]
-            elif Is_LowCost[gate]:
-                P_preferences[flight][gate] = flightsBrussels.loc[flight, "Pref. EU (low cost)"]
-            elif Is_Close[gate]:
-                P_preferences[flight][gate] = flightsBrussels.loc[flight, "Pref. Close"]
-            # if gate is neither international nor low cost: must be normal EU gate
             else:
-                P_preferences[flight][gate] = flightsBrussels.loc[flight, "Pref. EU (normal)"]
+                # international flights need to be treated different from EU ones
+                flight_is_international = flightsBrussels.loc[flight, "Pref. Int"] != 0
+                if flight_is_international:
+                    # if flight seems to be international but valid gate is EU: raise an error
+                    if Is_Int[gate] == 0:
+                        raise Exception("Flight seems to be international, but can be assigned to a EU gate!")
+                    # else: assign corresponding preference
+                    else:
+                        P_preferences[flight][gate] = flightsBrussels.loc[flight, "Pref. Int"]
+
+                # for EU flights: get info on gate type (international, low cost) and assign respective preference
+                else:
+                    if Is_Int[gate] == 2:
+                        P_preferences[flight][gate] = flightsBrussels.loc[flight, "Pref. Int"]
+                    if Is_LowCost[gate]:
+                        P_preferences[flight][gate] = flightsBrussels.loc[flight, "Pref. EU (low cost)"]
+                    elif Is_Close[gate]:
+                        P_preferences[flight][gate] = flightsBrussels.loc[flight, "Pref. Close"]
+                    # if gate is neither international nor low cost: must be normal EU gate
+                    else:
+                        P_preferences[flight][gate] = flightsBrussels.loc[flight, "Pref. EU (normal)"]
 
     return P_preferences
 # Build preferences
@@ -160,6 +172,20 @@ def build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N):
 # alpha3 = 100  # Penalty scaling factor for buffer time deficits
 # t_max = 30
 
+def mapGatesToIndices(Gates_N):
+    '''Assign a unique index, starting from 1, to each gate. Used to create the weight matrix for the CPP.
+    '''
+    gates_to_indices = {}   # keys: gate names, values: index corresponding to gate
+    indices_to_gates = {}   # inverse of gates_to_indices
+
+    it = 1
+    for gate in Gates_N.index:
+        if gate != "Dum":   # skip dummy gate, because it will not be part of the CPP MIP model
+            gates_to_indices[gate] = it
+            indices_to_gates[it] = gate
+            it += 1
+
+    return gates_to_indices, indices_to_gates
 
 # Function that reads input data and generates all relevant data structures
 def createInputData(local_path, check_output):
@@ -178,6 +204,9 @@ def createInputData(local_path, check_output):
                                            gatesBrussels["Close"], Flight_No, M_validGate)
     # Build shadow constraints
     shadow_constraints = build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N)
+
+    # map gate IDs to indices
+    gates_to_indices, indices_to_gates = mapGatesToIndices(Gates_N)
 
     # if desired: print some sample data from the results
     if check_output:
@@ -226,7 +255,7 @@ def createInputData(local_path, check_output):
         print(shadow_constraints[:5])
 
     return flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates, Flight_No, Gate_No, ETA, ETD, P_preferences, \
-        flights_to_activities, activities_to_flights, U_successor, M_validGate, shadow_constraints, no_towable_flights
+        flights_to_activities, activities_to_flights, U_successor, M_validGate, shadow_constraints, no_towable_flights, gates_to_indices, indices_to_gates
 
 
 

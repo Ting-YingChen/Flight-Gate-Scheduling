@@ -36,33 +36,40 @@ def callback_shadow_constraints(model, where):
             print(f"{violated_constraints} constraints were violated and addressed.")
 
 
-def build_cpp_model(vertices, weights, shadow_constraints):
+def build_cpp_model(weights, shadow_constraints):
     print("Solving with CCP: ")
 
     # Initialize the model
     model = Model("GateAssignmentCPP")
     model.setParam(GRB.Param.LazyConstraints, 1)  # Enable lazy constraints
-    model.setParam('OutputFlag', 0)
+    #model.setParam('OutputFlag', 0)
 
     # Decision variables: x[i, j] = 1 if i and j are in the same clique, 0 otherwise
+
+    no_nodes = len(weights)
     x = {}
-    for i in range(vertices):
-        for j in range(i + 1, vertices):
-            x[i, j] = model.addVar(vtype=GRB.BINARY, name=f"x[{i},{j}]")
+    for node_i in weights:
+        for node_j in weights:
+            if (node_j, node_i) not in x:
+                x[(node_i, node_j)] = model.addVar(vtype=GRB.BINARY, name=f"x[{node_i},{node_j}]")
+
 
     # print(weights)
     # print(vertices)
 
     # Objective: Maximize the sum of the weights for edges within the same clique
-    model.setObjective(quicksum(weights[i][j] * x[i, j] for i in range(vertices) for j in range(i + 1, vertices)), GRB.MINIMIZE)
+    model.setObjective(quicksum([weights[i][j] * x[i, j] for (i,j) in x]), GRB.MAXIMIZE)
 
     # Transitivity constraints to ensure that the solution forms a valid clique (4)
-    for i in range(vertices):
-        for j in range(i + 1, vertices):
-            for k in range(j + 1, vertices):
-                model.addConstr(x[i, j] + x[j, k] - x[i, k] <= 1)
-                model.addConstr(x[i, j] - x[j, k] + x[i, k] <= 1)
-                model.addConstr(-x[i, j] + x[j, k] + x[i, k] <= 1)
+    for i in range(no_nodes):
+        node_i = list(weights.keys())[i]
+        for j in range(i + 1, no_nodes):
+            node_j = list(weights.keys())[j]
+            for k in range(j + 1, no_nodes):
+                node_k = list(weights.keys())[k]
+                model.addConstr(x[(node_i, node_j)] + x[(node_j, node_k)] - x[(node_i, node_k)] <= 1)
+                model.addConstr(x[(node_i, node_j)] - x[(node_j, node_k)] + x[(node_i, node_k)] <= 1)
+                model.addConstr(-x[(node_i, node_j)] + x[(node_j, node_k)] + x[(node_i, node_k)] <= 1)
 
     # Store variables and constraints for the callback
     model._x = x
@@ -72,7 +79,7 @@ def build_cpp_model(vertices, weights, shadow_constraints):
     # Process results
     if model.status == GRB.Status.OPTIMAL:
         print("Optimal solution found with total score:", model.objVal)
-        solution = {f"x[{i},{j}]": x[i, j].X for i in range(vertices) for j in range(i + 1, vertices) if
+        solution = {f"x[{i},{j}]": x[i, j].X for (i,j) in x if
                     x[i, j].X > 0.5}
         print("Solution edges:", solution)
     else:
