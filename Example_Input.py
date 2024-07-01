@@ -8,6 +8,7 @@ gates = ['Gate 1', 'Gate 2', 'Gate 3', 'Dummy Gate']
 num_gates = len(gates)  # Number of real gates plus one dummy gate for overflow
 
 # Define time differences indicating when one flight can sequentially follow another
+# We have this :)
 T = [
     [0, 15, -10, 25, 30, 20],   # Flight 1
     [15, 0, 20, -5, 25, 30],    # Flight 2
@@ -17,7 +18,8 @@ T = [
     [20, 30, 25, -10, 30, 0]    # Flight 6
 ]
 
-# Updated preferences for each flight regarding each gate, improving the attractiveness of the Dummy Gate
+# Updated preferences for each flight regarding each gate
+# Dictionary better!!!
 P = [
     [60, 50, 40, 45],  # Flight 1 now has a better preference for the Dummy Gate
     [70, 60, 50, 55],  # Flight 2
@@ -30,6 +32,8 @@ P = [
 U = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]  # Successor function for each flight and gate
 
 # Specify valid gate assignments for each flight (inclusive of the Dummy Gate without capacity constraints)
+# This later will be dictionary too !!!
+# always put dummy gate at the end
 M = [
     [0, 1, 2, 3],    # Flight 1 can go to any gate including Dummy
     [0, 1, 2, 3],    # Flight 2
@@ -59,79 +63,3 @@ shadow_constraints = [
     (1, 1, 4, 2),  # Flight 2 cannot be at Gate 2 while Flight 5 is at Gate 3 due to maintenance at Gate 2
     (1, 3, 4, 3),  # Flight 2 at Gate 4 and Flight 5 at Gate 4 are also not possible if Gate 4 is under maintenance
 ]
-
-
-def calculate_large_negative(num_flights, T, P, U, M, alpha1, alpha2, alpha3, t_max):
-    # Min possible alpha1 preferences (choosing least preferred gate)
-    min_preferences = sum(min(alpha1 * P[i][g] for g in M[i]) for i in range(num_flights))
-
-    # Max possible alpha2 rewards (every flight needing a tow)
-    max_tow_rewards = sum(alpha2 for _ in range(num_flights))
-
-    # Max possible alpha3 penalties (all flights have the least buffer time)
-    max_buffer_penalties = 0
-    for i in range(num_flights):
-        for j in range(num_flights):
-            if i != j and T[i][j] < t_max:
-                max_buffer_penalties += -alpha3 * (t_max - T[i][j])
-
-    # Summing all components to find the upper bound of any feasible solution's objective value
-    upper_bound = max_tow_rewards + min_preferences + max_buffer_penalties
-
-    # Setting large_negative to a bit more than the calculated upper bound
-    large_negative = upper_bound + 1
-    return large_negative
-
-
-# Example usage
-# large_negative = calculate_large_negative(num_flights, T, P, U, M, alpha1, alpha2, alpha3, t_max)
-# print("Recommended large_negative value:", large_negative)
-
-
-def get_weight_matrix(num_flights, num_gates, T, P, U, M, alpha1, alpha2, alpha3, t_max, large_negative):
-    # Initialize the edge weights matrix
-    vertices = num_flights + num_gates - 1  # (5)
-    weights = [[0] * vertices for _ in range(vertices)]
-    # large_negative = calculate_large_negative(num_flights, T, P, U, M, alpha1, alpha2, alpha3, t_max)
-    '''Feedback 12.06.:
-    Sometimes, using very large numbers introduces numerical instability in following calculations and/or increase runtime.
-    Instead, you could set the value large_negative to be equal to some upper bound to the objective value of any feasible
-    solution plus +1. For this, try to maximize all components of the objective function (->all flights need to be towed,
-    gate with the lowest preference is chosen for each flight, buffer time is minimal for all flights).
-    '''
-
-    # Populate the weights matrix based on given rules (6)
-    for i in range(num_flights):
-        for j in range(num_flights):
-            if j < num_flights:  # Interaction between flights
-                if i != j:
-                    if T[i][j] < 0:  # Activities overlap in time
-                        weights[i][j] = large_negative
-                    elif U[i] == j or U[j] == i:  # Saving a tow
-                        weights[i][j] = alpha2
-                    else:
-                        weights[i][j] = -alpha3 * max(t_max - T[i][j], 0)  # Buffer time difference
-
-            # Weights for flight to gate assignments (7)
-            else:
-                gate_index = j - num_flights
-                if gate_index in M[i]:
-                    weights[i][j] = alpha1 * P[i][j - num_flights]
-                else:
-                    weights[i][j] = large_negative
-    '''
-    # Why do I need to include gates in to weights matrix?
-    '''
-    # Gates cannot be in the same clique (8)
-    for i in range(num_flights, vertices):
-        for j in range(num_flights, vertices):
-            weights[i][j] = large_negative
-
-    return vertices, weights
-
-
-# Example usage:
-# vertices, weights = get_weight_matrix(num_flights, num_gates, T, P, U, M, alpha1, alpha2, alpha3, t_max)
-# print("vertices: ", vertices)
-# print("weights: ", weights)
-

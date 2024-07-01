@@ -116,7 +116,7 @@ def initialize_clusters(initial_solution, num_flights, num_gates, vertices, weig
         list: Updated gate assignments with optimized initial clustering.
     """
 
-    initial_clusters = initial_solution[:]
+    initial_clusters = initial_solution[:] # every flight to dummy gate
     # print("alg2_initial:", alg2_initial)
     non_tabu = set(range(num_flights)) # Set all vertices as non-tabu initially
 
