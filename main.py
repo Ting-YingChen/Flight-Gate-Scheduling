@@ -10,7 +10,7 @@ def main():
     # processed_data = dp.preprocess_data(data)
 
     large_negative = vw.calculate_large_negative(num_flights, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max)
-    vertices, weights = vw.get_weight_matrix(num_flights, num_gates, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max, large_negative)
+    vertices, weights = vw.get_weight_dict(num_flights, num_gates, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max, large_negative)
     print("large_negative:", large_negative)
     # print("weights:", weights)
 

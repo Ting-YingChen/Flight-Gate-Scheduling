@@ -103,6 +103,9 @@ print(gatesBrussels.head())
 print("\nFlight_No:", Flight_No)
 print("Gate_No:", Gate_No)
 
+print("\nnum_flights:", num_flights)
+print("num_gates:", num_gates)
+
 # Check a slice of the T matrix to ensure it's properly loaded
 print("\nSample of T matrix (T_timeDiff):")
 print(T_timeDiff.iloc[:5, :5])
