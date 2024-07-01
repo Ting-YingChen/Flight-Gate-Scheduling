@@ -7,6 +7,8 @@ num_flights = len(flights)  # Number of flights
 gates = ['Gate 1', 'Gate 2', 'Gate 3', 'Dummy Gate']
 num_gates = len(gates)  # Number of real gates plus one dummy gate for overflow
 
+# todo: note: right here you can use lists. Once you transfer flights to activities, you should use dictionaries!
+
 # Define time differences indicating when one flight can sequentially follow another
 # We have this :)
 T = [
@@ -29,6 +31,7 @@ P = [
     [60, 45, 35, 50]   # Flight 6
 ]
 
+# todo: successor function must have EXACTLY one entry for each flight
 U = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]  # Successor function for each flight and gate
 
 # Specify valid gate assignments for each flight (inclusive of the Dummy Gate without capacity constraints)
@@ -59,7 +62,7 @@ An example for a realistic shadow constraint could be e.g. (0,0,1,1), meaning th
 flight 1 is parked at gate 1.
 '''
 shadow_constraints = [
-    (0, 2, 2, 2),  # Flight 1 cannot be at Gate 3 while Flight 3 is at Gate 3 due to proximity constraints
+    (0, 2, 2, 3),  # Flight 1 cannot be at Gate 2 while Flight 3 is at Gate 3 due to proximity constraints
     (1, 1, 4, 2),  # Flight 2 cannot be at Gate 2 while Flight 5 is at Gate 3 due to maintenance at Gate 2
     (1, 3, 4, 3),  # Flight 2 at Gate 4 and Flight 5 at Gate 4 are also not possible if Gate 4 is under maintenance
 ]
