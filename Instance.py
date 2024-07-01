@@ -1,5 +1,5 @@
 import pandas as pd
-
+import datetime
 
 '''
 Importing the following data from the instance:
@@ -11,7 +11,8 @@ Importing the following data from the instance:
 '''
 
 # Use latest excel (for now, change "local_path" to represent actual directory)
-local_path = '/Users/chentingying/Documents/tum/AS_Operation_Management/Brussels.xlsm'
+local_path = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
+
 
 # Importing flights
 flightCount = len(pd.read_excel(local_path, sheet_name='EBBR - Flights', header=1, usecols='A:A'))   # "header" = labels of columns (0 = 1st row)
@@ -54,7 +55,7 @@ Flight_No = flightsBrussels.index.tolist()      # List of integers
 ETA = flightsBrussels['ETA']
 ETD = flightsBrussels['ETD']
 E_Parking = flightsBrussels['Planned Duration']
-RTA = flightsBrussels['RTA']
+RTA = flightsBrussels['RTA']        # use RTA and RTD for models
 RTD = flightsBrussels['RTD']
 R_Parking = flightsBrussels['Real Duration']
 Tot_Delay = flightsBrussels['Total Delay']
@@ -77,6 +78,7 @@ for flight in Flight_No:
     P_preferences[flight] = pref[flight - 1]
 
 def real_Pref(AC_size, Max_Wingspan, preferences, Is_Int, Is_Close):
+    # pass all variables used in the function as arguments (Flight_No, Gate_No)
     realPref = {}
     for flight in Flight_No:
         prefSub = {}
@@ -115,21 +117,65 @@ Is_Int = gatesBrussels['International']             # 1 if international,   0 if
 Is_LowCost = gatesBrussels['Low cost']              # 1 if low cost,        0 if not, 2 if dummy gate
 Is_Close = gatesBrussels['Close']                   # 1 if close,           0 if not, 2 if dummy gate
 
-# U list of successors (U[i] = successor of i, 0 if no successor)
-def build_Udict(Flight_No):
+
+
+# added new function: map flights to activites
+def createActivitiesFromFlights(Flight_No, flightsBrussels):
+    '''map flights to activities (arrivals, departures, parking [if possible]).
+    also creates a successor dictionary udict.
+    '''
+    flights_to_activities = {} # keys: flight no., values: list of all activities associated with respective flight
+    activities_to_flights = {} # inverse dictionary of flights_to_activities
     Udict = {}
-    for flight in range(len(Flight_No)):
-        Udict[flight] = [3 * flight - 1, 3 * flight + 2, 0]
-    return Udict
+
+    for flight in Flight_No:
+        arrival = flightsBrussels.loc[flight, "RTA"]
+        departure = flightsBrussels.loc[flight, "RTD"]
+        is_turnaround = None
+        # todo: add some condition on whether or not flight can be towed during layover
+        # example: layover > 60 minutes => flight can be towed
+        dep_datetime = datetime.datetime.combine(datetime.datetime(2000, 1, 1), departure)
+        arr_datetime = datetime.datetime.combine(datetime.datetime(2000, 1, 1), arrival)
+        layover_seconds = dep_datetime - arr_datetime
+        is_towable = layover_seconds > datetime.timedelta(seconds=3600)
+        # map flights to activities
+        flights_to_activities[flight] = [f"arrival_{flight}", f"departure_{flight}"]
+        Udict[f"departure_{flight}"] = 0    # departures activity has no successor
+        if is_towable:
+            flights_to_activities[flight].append(f"parking_{flight}")
+            Udict[f"arrival_{flight}"] = f"parking_{flight}"
+            Udict[f"parking_{flight}"] = f"departure_{flight}"
+        else:
+            Udict[f"arrival_{flight}"] = f"departure_{flight}"
+
+
+        # also map activities to flights
+        activities_to_flights[f"arrival_{flight}"] = flight
+        activities_to_flights[f"departure_{flight}"] = flight
+        if is_towable:
+            activities_to_flights[f"parking_{flight}"] = flight
+
+    return flights_to_activities, activities_to_flights, Udict
+
+flights_to_activities, activities_to_flights, U_successor = createActivitiesFromFlights(Flight_No, flightsBrussels)
+
+# U list of successors (U[i] = successor of i, 0 if no successor)
+# U has one entry for each ACTIVITY, not for each FLIGHT
+# def build_Udict(Flight_No, flights_to_activities):
+#     Udict = {}
+#     for flight in range(len(Flight_No)):
+#         Udict[flight] = [3 * flight - 1, 3 * flight + 2, 0] # what is this supposed to be?
+#     return Udict
 
 # Building M
 def build_Mdict(AC_size, Max_Wingspan, preferences, Is_Int):
+    # pass all variables used in the function as arguments (Flight_No, Gate_No)
     Mdict = {}  # Dictionary to store the gates allowed for each flight
     for flight in Flight_No:
         Msub = []   # Gates allowed for the flight 'flight'
         for gate in Gate_No:
             PlaneFits = AC_size.loc[flight] <= Max_Wingspan.loc[gate]
-            GoodGate = preferences[flight][0] / 10 == Is_Int.loc[gate] or Is_Int.loc[gate] == 2
+            GoodGate = preferences[flight][0] / 10 == Is_Int.loc[gate] or Is_Int.loc[gate] == 2     # what is happening here?
             if PlaneFits and GoodGate:
                 Msub.append(gate)
 
@@ -166,6 +212,14 @@ shadow_constraints should be a list of 4-tuples (i, k, j, l)
 indicating that activity i can’t occur at gate k while activity j occurs at gate l.
 '''
 def build_ShadowConstraints(FLight_No, ETAorRTA, ETDorRTD, Mdict, Gates_N):
+    # preprocessing: store information on neighbouring or identical gates. Reduces runtime by >90%
+    GatesAreNext = {}
+    GatesAreSame = {}
+    for gate_f1 in Gates_N.index:
+        for gate_f2 in Gates_N.columns:
+            GatesAreNext[(gate_f1, gate_f2)] = Gates_N.loc[gate_f1, gate_f2] == 1
+            GatesAreSame[(gate_f1, gate_f2)] = Gates_N.loc[gate_f1, gate_f2] == -1  # Check if they are the same gates
+
     all_SC = []
     for flight1 in Flight_No:
         for flight2 in Flight_No: # flight2 > flight1:
@@ -178,23 +232,26 @@ def build_ShadowConstraints(FLight_No, ETAorRTA, ETDorRTD, Mdict, Gates_N):
                 '''
                 for gate_f1 in Mdict[flight1]:
                     for gate_f2 in Mdict[flight2]:
-                        GatesAreNext = Gates_N.loc[gate_f1, gate_f2] == 1       # Check if gates are next to each other
-                        GatesAreSame = Gates_N.loc[gate_f1, gate_f2] == -1      # Check if they are the same gates
+                        # GatesAreNext = Gates_N.loc[gate_f1, gate_f2] == 1       # Check if gates are next to each other
+                        # GatesAreSame = Gates_N.loc[gate_f1, gate_f2] == -1      # Check if they are the same gates
+                        # no shadow constraint necessary when gates are the same!
                         '''GatesAreSame necessary? Or also checked elsewhere that two flights cannot be on the same gate'''
-                        if (GatesAreNext or GatesAreSame) and (gate_f1 != 'Dum' and gate_f1 != 'Dum'):
+                        if (GatesAreNext[(gate_f1, gate_f2)] or GatesAreSame[(gate_f1, gate_f2)]) and (gate_f1 != 'Dum' and gate_f2 != 'Dum'):
                             SC1 = (flight1, gate_f1, flight2, gate_f2)
                             # SC2 = (flight2, gate_f2, flight1, gate_f1)
                             '''Necessary to have the symmetric no?'''
+                            # not necessary to have symmetric ones
                             all_SC.append(SC1)
                             # all_SC.append(SC2)
+
     return all_SC
 
 
 # T, P, U, M, shadow_constraints
 
-T_timeDiff = T_matrix.values.tolist()
+T_timeDiff = T_matrix       # either keep it as dataframe or convert it to numpy array as you previously did
 P_preferences = pref_to_dict(Flight_No=Flight_No, pref=pref)
-U_successor = build_Udict(Flight_No)
+# U_successor = build_Udict(Flight_No)
 M_validGate = build_Mdict(AC_size=AC_size, Max_Wingspan=Max_Wingspan, preferences=P_preferences, Is_Int=Is_Int)
 shadow_constraints = build_ShadowConstraints(Flight_No, ETAorRTA=ETA, ETDorRTD=ETD, Mdict=M_validGate, Gates_N = Gates_N)
 #print(f'There are {len(shadow_constraints)} shadow constraints.')
