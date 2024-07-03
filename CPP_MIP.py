@@ -1,5 +1,4 @@
 from gurobipy import Model, GRB, quicksum
-
 # Callback function to add lazy constraints
 '''
 Denote by (x_ij)^* the set of all binary variables x_ij that are set to 1 in your current optimal solution.
