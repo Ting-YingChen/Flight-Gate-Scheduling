@@ -116,7 +116,6 @@ def createActivitiesFromFlights(Flight_No, flights):
     '''
     flights_to_activities = {} # keys: flight no., values: list of all activities associated with respective flight
     activities_to_flights = {} # inverse dictionary of flights_to_activities
-    num_activities = sum(len(activities) for activities in flights_to_activities.values())
     Udict = {}
     no_towable_flights = 0  # counts the number of flights that can theoretically be towed
 
@@ -158,6 +157,9 @@ def createActivitiesFromFlights(Flight_No, flights):
         activities_to_flights[f"departure_{flight}"] = flight
         if is_towable:
             activities_to_flights[f"parking_{flight}"] = flight
+
+    # Calculate the total number of activities
+    num_activities = sum(len(acts) for acts in flights_to_activities.values())
 
     return flights_to_activities, activities_to_flights, num_activities, Udict, no_towable_flights
 

@@ -26,7 +26,7 @@ def main():
     # Import data
     flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates, Flight_No, Gate_No, ETA, ETD, P_preferences, \
         flights_to_activities, activities_to_flights, num_activities, U_successor, M_validGate, shadow_constraints, no_towable_flights,\
-        gates_to_indices, indices_to_gates = Instance.createInputData(LOCAL_PATH, check_output)
+        gates_to_indices, indices_to_gates = instance_TYorganised.createInputData(LOCAL_PATH, check_output)
 
     large_negative = vw.calculate_large_negative(Flight_No, num_flights, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max)
     weights = vw.get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max, large_negative,

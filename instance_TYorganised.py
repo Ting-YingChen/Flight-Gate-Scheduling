@@ -118,7 +118,10 @@ def createActivitiesFromFlights(Flight_No, flightsBrussels):
         if is_towable:
             activities_to_flights[f"parking_{flight}"] = flight
 
-    return flights_to_activities, activities_to_flights, Udict, no_towable_flights
+    # Calculate the total number of activities
+    num_activities = sum(len(acts) for acts in flights_to_activities.values())
+
+    return flights_to_activities, activities_to_flights, num_activities, Udict, no_towable_flights
 
 # flights_to_activities, activities_to_flights, U_successor = createActivitiesFromFlights(Flight_No, flightsBrussels)
 
@@ -163,15 +166,6 @@ def build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N):
                             shadow_constraints.append((flight1, gate1, flight2, gate2))
     return shadow_constraints
 
-# # Build shadow constraints
-# shadow_constraints = build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N)
-
-# # Parameters based on experiences
-# alpha1 = 1  # Preference scaling factor
-# alpha2 = 20  # Reward for avoiding tows
-# alpha3 = 100  # Penalty scaling factor for buffer time deficits
-# t_max = 30
-
 def mapGatesToIndices(Gates_N):
     '''Assign a unique index, starting from 1, to each gate. Used to create the weight matrix for the CPP.
     '''
@@ -195,7 +189,7 @@ def createInputData(local_path, check_output):
     # Process data
     Flight_No, Gate_No, ETA, ETD = process_data(flightsBrussels, gatesBrussels)
     # Create activities and generate successor function
-    flights_to_activities, activities_to_flights, U_successor, no_towable_flights = createActivitiesFromFlights(Flight_No, flightsBrussels)
+    flights_to_activities, activities_to_flights, num_activities, U_successor, no_towable_flights = createActivitiesFromFlights(Flight_No, flightsBrussels)
     # Create feasible gate dictionary M
     M_validGate = build_Mdict(flightsBrussels['AC size (m)'], flightsBrussels["Pref. Int"], gatesBrussels['Max length (m)'],
                               gatesBrussels['International'], Flight_No, Gate_No)
@@ -255,7 +249,7 @@ def createInputData(local_path, check_output):
         print(shadow_constraints[:5])
 
     return flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates, Flight_No, Gate_No, ETA, ETD, P_preferences, \
-        flights_to_activities, activities_to_flights, U_successor, M_validGate, shadow_constraints, no_towable_flights, gates_to_indices, indices_to_gates
+        flights_to_activities, activities_to_flights, num_activities, U_successor, M_validGate, shadow_constraints, no_towable_flights, gates_to_indices, indices_to_gates
 
 
 
