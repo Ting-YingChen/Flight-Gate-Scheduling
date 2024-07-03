@@ -13,6 +13,7 @@ def calculate_large_negative(activities_to_flights, Flight_No, num_flights, no_t
     Returns:
         int: The calculated large negative value to be used in optimization constraints.
     """
+
     # Calculate the minimum possible alpha1 preferences by choosing the least preferred gate (alpha1)
     min_preferences = []
     for flight in Flight_No: # Flight_No starts from 1
