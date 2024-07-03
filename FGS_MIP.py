@@ -112,6 +112,7 @@ def build_FGS_model(num_flights, num_gates, P_preferences, U_successor, T_timeDi
 
     return model, x, tows
 
+'''
 # Dictionary-based data
 num_flights = 4
 num_gates = 3
@@ -146,5 +147,6 @@ if model.status == GRB.OPTIMAL:
                 print(f"Flight {f} is assigned to gate {g}")
 else:
     print("No optimal solution found.")
+'''
 
 

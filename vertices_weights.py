@@ -112,35 +112,6 @@ def get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_success
             weights[gate_i][gate_j] = large_negative
             weights[gate_j][gate_i] = large_negative
 
-
-    # # Populate the weights matrix based on given rules (6)
-    # for i in Flight_No:  # Using zero-based indices
-    #     for j in Flight_No:
-    #         if i != j:
-    #             if T_timeDiff[i][j] < 0:  # Activities overlap in time
-    #                 weights[i][j] = large_negative
-    #             elif j in U_successor[i]:  # Saving a tow (assuming U_successor[i] gives a list of successor flights)
-    #                 weights[i][j] = alpha2
-    #             else:
-    #                 buffer_time = T_timeDiff[i][j]
-    #                 if buffer_time >= 0:
-    #                     weights[i][j] = -alpha3 * max(t_max - buffer_time, 0)  # Buffer time difference
-    #
-    # # Weights for flight to gate assignments (7)
-    # for i in Flight_No:
-    #     for j in range(num_flights, vertices):
-    #         gate_index = j - num_flights  # Mapping index to gate name
-    #         if gate_index in M_validGate[i]:
-    #             weights[i][j] = alpha1 * P_preferences[i][j - num_flights]
-    #         else:
-    #             weights[i][j] = large_negative
-    #
-    # # Gates cannot be in the same clique (8)
-    # for i in range(num_flights, vertices):
-    #     for j in range(num_flights, vertices):
-    #         weights[i][j] = large_negative
-
-
     return weights
 
 

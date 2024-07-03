@@ -53,10 +53,6 @@ def build_cpp_model(weights, shadow_constraints):
             if (node_j, node_i) not in x:
                 x[(node_i, node_j)] = model.addVar(vtype=GRB.BINARY, name=f"x[{node_i},{node_j}]")
 
-
-    # print(weights)
-    # print(vertices)
-
     # Objective: Maximize the sum of the weights for edges within the same clique
     model.setObjective(quicksum([weights[i][j] * x[i, j] for (i,j) in x]), GRB.MAXIMIZE)
 
@@ -86,11 +82,3 @@ def build_cpp_model(weights, shadow_constraints):
         print("No optimal solution found. Status:", model.status)
 
     return model
-
-# model = build_cpp_model(vertices, weights, shadow_constraints)
-
-
-
-
-
-
