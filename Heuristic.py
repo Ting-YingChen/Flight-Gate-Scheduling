@@ -1,5 +1,3 @@
-import random
-
 import numpy as np
 def calculate_heuristic_value(i, C, D, weights):
     """

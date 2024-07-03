@@ -7,7 +7,6 @@ You can then cut off this solution by adding the constraint sum_((i,j): x_ij^* =
 where the latter expression is the number of nonzero variables in your current optimal solution.
 '''
 
-
 def callback_shadow_constraints(model, where):
     """
     Callback function to add lazy constraints for shadow constraints during the optimization.
