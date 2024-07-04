@@ -1,10 +1,16 @@
-import instance_TYorganised
+import Instance
 import vertices_weights as vw
 import CPP_MIP as cpp
 # import FGS_MIP as fgs
 import Heuristic
 
-def main():
+# Configurations for data import
+LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management/Brussels.xlsm'
+LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
+LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
+LOCAL_PATH = LOCAL_PATH_Arthur
+
+def main(local_path):
     # 0. define all relevant model parameters
     # Parameters based on experiences
     alpha1 = 1  # Preference scaling factor
@@ -12,16 +18,16 @@ def main():
     alpha3 = 100  # Penalty scaling factor for buffer time deficits
     t_max = 30
 
-
-    #jsdvbjs
-    # zlakejfhazekjhfzelkrjhfiojer
-    # load excel file and create all relevant data structures
-    LOCAL_PATH = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
     check_output = False
+
     # Import data
-    flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates, Flight_No, Gate_No, ETA, ETD, P_preferences, \
-        flights_to_activities, activities_to_flights, U_successor, M_validGate, shadow_constraints, no_towable_flights,\
-        gates_to_indices, indices_to_gates = instance_TYorganised.createInputData(LOCAL_PATH, check_output)
+    (flights, num_flights, gates, num_gates, T_timeDiff, Gates_N,
+    Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close,
+    P_preferences,
+    flights_to_activities, activities_to_flights, U_successor, no_towable_flights,
+    M_validGate,
+    shadow_constraints,
+    gates_to_indices, indices_to_gates) = Instance.createInputData(local_path, check_output)
 
 
     # Load and prepare data
@@ -54,4 +60,4 @@ def main():
     print("Heuristic Solution:", heuristic_solution)
 
 if __name__ == "__main__":
-    main()
+    main(LOCAL_PATH)
