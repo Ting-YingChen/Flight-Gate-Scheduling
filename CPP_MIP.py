@@ -61,6 +61,8 @@ def build_cpp_model(weights, shadow_constraints):
     model.setObjective(quicksum([weights[i][j] * x[i, j] for (i,j) in x]), GRB.MAXIMIZE)
 
     # Transitivity constraints to ensure that the solution forms a valid clique (4)
+    print("-----------------------------------------------------")
+    print(f"Start, no_nodes = {no_nodes}")
     for i in range(no_nodes):
         node_i = list(weights.keys())[i]
         for j in range(i + 1, no_nodes):
@@ -70,6 +72,9 @@ def build_cpp_model(weights, shadow_constraints):
                 model.addConstr(x[(node_i, node_j)] + x[(node_j, node_k)] - x[(node_i, node_k)] <= 1)
                 model.addConstr(x[(node_i, node_j)] - x[(node_j, node_k)] + x[(node_i, node_k)] <= 1)
                 model.addConstr(-x[(node_i, node_j)] + x[(node_j, node_k)] + x[(node_i, node_k)] <= 1)
+
+        print(f"Done, i = {i}")
+
 
     # Store variables and constraints for the callback
     model._x = x
@@ -88,9 +93,4 @@ def build_cpp_model(weights, shadow_constraints):
     return model
 
 # model = build_cpp_model(vertices, weights, shadow_constraints)
-
-
-
-
-
 
