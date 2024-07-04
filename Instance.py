@@ -5,7 +5,7 @@ import datetime
 LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management/Brussels.xlsm'
 LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
 LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
-LOCAL_PATH = LOCAL_PATH_TingYing
+LOCAL_PATH = LOCAL_PATH_Arthur
 
 # Data Import Functions
 def import_data(local_path):
@@ -24,7 +24,6 @@ def import_data(local_path):
 
     # Gates Neighbours and Distances
     Gates_N = pd.read_excel(local_path, sheet_name='EBBR - Gates (next)', usecols='A:DA', header=0, index_col=0, nrows=num_gates)
-    Gates_D = pd.read_excel(local_path, sheet_name='EBBR - Gates (dist)', usecols='A:CA', header=0, index_col=0, nrows=num_gates)
 
     return flights, gates, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates
 
@@ -158,10 +157,7 @@ def createActivitiesFromFlights(Flight_No, flights):
         if is_towable:
             activities_to_flights[f"parking_{flight}"] = flight
 
-    # Calculate the total number of activities
-    num_activities = sum(len(acts) for acts in flights_to_activities.values())
-
-    return flights_to_activities, activities_to_flights, num_activities, Udict, no_towable_flights
+    return flights_to_activities, activities_to_flights, Udict, no_towable_flights
 
 # # Create flight activities
 # flights_to_activities, activities_to_flights, U_successor = createActivitiesFromFlights(Flight_No, flightsBrussels)
@@ -211,6 +207,14 @@ def build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N):
 # # Build shadow constraints
 # shadow_constraints = build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N)
 
+
+
+# # Parameters based on experiences
+# alpha1 = 1  # Preference scaling factor
+# alpha2 = 20  # Reward for avoiding tows
+# alpha3 = 100  # Penalty scaling factor for buffer time deficits
+# t_max = 30
+
 def mapGatesToIndices(Gates_N):
     '''Assign a unique index, starting from 1, to each gate. Used to create the weight matrix for the CPP.
     '''
@@ -235,7 +239,7 @@ def createInputData(local_path, check_output):
     Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close = process_data(flightsBrussels, gatesBrussels)
 
     # Create activities and generate successor function
-    flights_to_activities, activities_to_flights, num_activities, U_successor, no_towable_flights = createActivitiesFromFlights(Flight_No, flightsBrussels)
+    flights_to_activities, activities_to_flights, U_successor, no_towable_flights = createActivitiesFromFlights(Flight_No, flightsBrussels)
 
     # Create feasible gate dictionary M
     M_validGate = build_Mdict(flightsBrussels['AC size (m)'], flightsBrussels["Pref. Int"], gatesBrussels['Max length (m)'],
@@ -299,7 +303,7 @@ def createInputData(local_path, check_output):
 
     return (flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates,
             Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close,
-            flights_to_activities, activities_to_flights, num_activities, U_successor, no_towable_flights,
+            flights_to_activities, activities_to_flights, U_successor, no_towable_flights,
             M_validGate,
             P_preferences,
             shadow_constraints,
