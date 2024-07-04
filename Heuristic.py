@@ -1,5 +1,6 @@
-
 import numpy as np
+
+
 def calculate_heuristic_value(i, C, D, weights):
     """
     Calculate the heuristic value for moving vertex i from its current cluster C[i] to a new cluster D.
@@ -7,6 +8,7 @@ def calculate_heuristic_value(i, C, D, weights):
     sum_weights_new_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == D)
     sum_weights_current_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == C[i] and j != i)
     return sum_weights_new_cluster - sum_weights_current_cluster
+
 
 def calculate_total_score(solution, weights):
     """
@@ -20,15 +22,17 @@ def calculate_total_score(solution, weights):
                 # Do I need to consider succeor here?
     return score
 
+
 def is_move_feasible(i, proposed_gate, current_solution, shadow_constraints):
     """
     Checks if moving flight `i` to `proposed_gate` violates any shadow constraints.
     """
     for (f1, g1, f2, g2) in shadow_constraints:
         if (f1 == i and g1 == proposed_gate and current_solution[f2] == g2) or \
-           (f2 == i and g2 == proposed_gate and current_solution[f1] == g1):
+                (f2 == i and g2 == proposed_gate and current_solution[f1] == g1):
             return False
     return True
+
 
 def reassign_vertices(solution, weights, M_validGate, P_preferences):
     """
@@ -38,6 +42,7 @@ def reassign_vertices(solution, weights, M_validGate, P_preferences):
         if solution[i] == 'Dum' and M_validGate[i]:
             best_gate = max((P_preferences[i][g], g) for g in M_validGate[i] if g != 'Dum')[1]
             solution[i] = best_gate
+
 
 def eliminate_conflicts(solution, M_validGate, U_successor):
     """
@@ -57,12 +62,13 @@ def eliminate_conflicts(solution, M_validGate, U_successor):
                     if not reassigned:
                         solution[j] = 'Dum'  # Fallback to dummy gate if no valid reassignment found
 
+
 '''
 def initialize_clusters(initial_solution, num_flights, num_gates, weights):
     """
     (Algorithm 2)
     Generates an initial solution for gate assignments.
-    
+
     Returns:
         list: Updated gate assignments with optimized initial clustering.
     """
@@ -113,6 +119,7 @@ def initialize_clusters(initial_solution, num_flights, num_gates, weights):
     return initial_clusters
 '''
 
+
 def initialize_clusters(initial_solution, num_activities, num_gates, weights):
     """
     (Algorithm 2)
@@ -154,6 +161,7 @@ def initialize_clusters(initial_solution, num_activities, num_gates, weights):
 
     return solution
 
+
 def refine_clusters(initial_clusters, num_flights, num_gates, weights, shadow_constraints):
     """
     (Algorithm 1)
@@ -192,7 +200,7 @@ def refine_clusters(initial_clusters, num_flights, num_gates, weights, shadow_co
 
         for i in range(num_flights):
             if i in tabu_list:
-                continue # Skip processing for tabu flights
+                continue  # Skip processing for tabu flights
 
             current_cluster = current_solution[i]
             # Iterate through all potential new clusters for vertex i
@@ -201,7 +209,7 @@ def refine_clusters(initial_clusters, num_flights, num_gates, weights, shadow_co
                     if is_move_feasible(i, D, current_solution, shadow_constraints):
 
                         potential_improvement = calculate_heuristic_value(no_nodes, weights)
-                        #print(f"Evaluating move of Vertex {i} from Cluster {current_cluster} to Cluster {D}: Improvement {current_improvement}")
+                        # print(f"Evaluating move of Vertex {i} from Cluster {current_cluster} to Cluster {D}: Improvement {current_improvement}")
 
                         if potential_improvement > best_improvement:
                             best_improvement = potential_improvement
@@ -212,15 +220,16 @@ def refine_clusters(initial_clusters, num_flights, num_gates, weights, shadow_co
             tabu_list.add((i, D))  # Add move to tabu list
             changed = True
             current_score = calculate_total_score(current_solution, weights)
-            #print(f"Moving Vertex {i} to Cluster {D}, marking Vertex {i} as tabu.")
+            # print(f"Moving Vertex {i} to Cluster {D}, marking Vertex {i} as tabu.")
 
             if current_score > best_score:
                 best_score = current_score
                 best_solution = current_solution[:]
 
         iteration += 1
-        #print(f"Iteration {iteration} of algorithm 1 completed with solution: {solution}")
+        # print(f"Iteration {iteration} of algorithm 1 completed with solution: {solution}")
     return best_solution
+
 
 def apply_two_opt_step(solution, weights, C):
     """
@@ -256,6 +265,7 @@ def apply_two_opt_step(solution, weights, C):
                         solution[i], solution[j] = solution[j], solution[i]
                         improved = True
     return solution
+
 
 def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences):
     """
@@ -303,6 +313,7 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
 
     return best_solution
 
+
 def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences):
     """
     Optimizes gate assignments by integrating a 2-opt optimization step immediately after initial clustering.
@@ -341,6 +352,7 @@ def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_s
 
     return best_solution
 
+
 def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences):
     """
     Optimizes gate assignments by integrating a 2-opt strategy with heuristic refinement.
@@ -375,5 +387,3 @@ def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_succ
         eliminate_conflicts(refined_solution, M_validGate, U_successor)
 
     return best_solution
-
-

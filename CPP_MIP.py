@@ -1,10 +1,12 @@
 from gurobipy import Model, GRB, quicksum
+
 # Callback function to add lazy constraints
 '''
 Denote by (x_ij)^* the set of all binary variables x_ij that are set to 1 in your current optimal solution.
 You can then cut off this solution by adding the constraint sum_((i,j): x_ij^* = 1) x_ij <= |(x_ij)^*| - 1,
 where the latter expression is the number of nonzero variables in your current optimal solution.
 '''
+
 
 def callback_shadow_constraints(model, where):
     """
@@ -51,10 +53,16 @@ def build_cpp_model(weights, shadow_constraints):
             if (node_j, node_i) not in x:
                 x[(node_i, node_j)] = model.addVar(vtype=GRB.BINARY, name=f"x[{node_i},{node_j}]")
 
+
+    # print(weights)
+    # print(vertices)
+
     # Objective: Maximize the sum of the weights for edges within the same clique
     model.setObjective(quicksum([weights[i][j] * x[i, j] for (i,j) in x]), GRB.MAXIMIZE)
 
     # Transitivity constraints to ensure that the solution forms a valid clique (4)
+    print("-----------------------------------------------------")
+    print(f"Start, no_nodes = {no_nodes}")
     for i in range(no_nodes):
         node_i = list(weights.keys())[i]
         for j in range(i + 1, no_nodes):
@@ -64,6 +72,9 @@ def build_cpp_model(weights, shadow_constraints):
                 model.addConstr(x[(node_i, node_j)] + x[(node_j, node_k)] - x[(node_i, node_k)] <= 1)
                 model.addConstr(x[(node_i, node_j)] - x[(node_j, node_k)] + x[(node_i, node_k)] <= 1)
                 model.addConstr(-x[(node_i, node_j)] + x[(node_j, node_k)] + x[(node_i, node_k)] <= 1)
+
+        print(f"Done, i = {i}")
+
 
     # Store variables and constraints for the callback
     model._x = x
@@ -80,3 +91,6 @@ def build_cpp_model(weights, shadow_constraints):
         print("No optimal solution found. Status:", model.status)
 
     return model
+
+# model = build_cpp_model(vertices, weights, shadow_constraints)
+

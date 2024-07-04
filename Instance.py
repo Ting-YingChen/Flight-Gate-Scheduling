@@ -158,7 +158,9 @@ def createActivitiesFromFlights(Flight_No, flights):
         if is_towable:
             activities_to_flights[f"parking_{flight}"] = flight
 
-    return flights_to_activities, activities_to_flights, Udict, no_towable_flights
+    num_activities = len(activities_to_flights)
+
+    return flights_to_activities, activities_to_flights, Udict, no_towable_flights, num_activities
 
 # # Create flight activities
 # flights_to_activities, activities_to_flights, U_successor = createActivitiesFromFlights(Flight_No, flightsBrussels)
@@ -240,7 +242,7 @@ def createInputData(local_path, check_output):
     Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close = process_data(flights, gates)
 
     # Create activities and generate successor function
-    flights_to_activities, activities_to_flights, U_successor, no_towable_flights = createActivitiesFromFlights(Flight_No, flights)
+    flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities = createActivitiesFromFlights(Flight_No, flights)
 
     # Create feasible gate dictionary M
     M_validGate = build_Mdict(flights['AC size (m)'], flights["Pref. Int"], gates['Max length (m)'],
@@ -303,7 +305,7 @@ def createInputData(local_path, check_output):
     return (flights, num_flights, gates, num_gates, T_timeDiff, Gates_N,
             Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close,
             P_preferences,
-            flights_to_activities, activities_to_flights, U_successor, no_towable_flights,
+            flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities,
             M_validGate,
             shadow_constraints,
             gates_to_indices, indices_to_gates)
