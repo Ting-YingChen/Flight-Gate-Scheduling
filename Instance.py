@@ -1,12 +1,6 @@
 import pandas as pd
 import datetime
 
-# Configurations for data import
-LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management/Brussels.xlsm'
-LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
-LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
-LOCAL_PATH = LOCAL_PATH_Arthur
-
 # Data Import Functions
 def import_data(local_path):
     # Flights
@@ -25,7 +19,7 @@ def import_data(local_path):
     # Gates Neighbours and Distances
     Gates_N = pd.read_excel(local_path, sheet_name='EBBR - Gates (next)', usecols='A:DA', header=0, index_col=0, nrows=num_gates)
 
-    return flights, gates, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates
+    return flights, num_flights, gates, num_gates, T_timeDiff, Gates_N
 
 # # Import data
 # flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates = import_data(LOCAL_PATH)
@@ -74,8 +68,8 @@ def build_preferences_dict(flights, Is_Int, Is_LowCost, Is_Close, Flight_No, M_v
                     # F_pref += 10     # This is not a preference, it's a constraint -> already included in M_validGate
                     pass
                 if BothAreEU:
-                    prefForNormal = flights.loc[flight, "Pref.EU (normal)"]
-                    prefForLowCost = flights.loc[flight, "Pref.EU (low cost)"]
+                    prefForNormal = flights.loc[flight, "Pref. EU (normal)"]
+                    prefForLowCost = flights.loc[flight, "Pref. EU (low cost)"]
                     prefForClose = flights.loc[flight, "Pref. Close"]
                     BothNormal = prefForNormal == 10 and Is_LowCost[gate] == 0
                     BothLowCost = prefForLowCost == 10 and Is_LowCost[gate] == 1
@@ -123,15 +117,22 @@ def createActivitiesFromFlights(Flight_No, flights):
         # departure = flights.loc[flight, "ETD"]
         arrival = flights.loc[flight, "RTA"]
         departure = flights.loc[flight, "RTD"]
+        TotDelay = flights.loc[flight, "Total Delay"]
         is_turnaround = None
 
         # Decide whether flight is towable or not
         dep_datetime = datetime.datetime.combine(datetime.datetime(2000, 1, 1), departure)
         arr_datetime = datetime.datetime.combine(datetime.datetime(2000, 1, 1), arrival)
+        #TotDelay_datetime = datetime.datetime.combine(datetime.datetime(2000, 1, 1), TotDelay) # Doesn't work because string?
         layover_seconds = dep_datetime - arr_datetime
+
         # Conditions for flight to be towable:
         C1 = layover_seconds > datetime.timedelta(seconds=3600)                     # Layover > 60min
-        C2 = flights.loc[flight, "Total Delay"] > datetime.timedelta(seconds=1200)  # Delay < 20min (avoid delaying the flight even more)
+        hours, minutes = map(int, flights.loc[flight, "Total Delay"].split(":"))
+        NewTotDelay = (hours * 60 + minutes) * 60
+        C2 = NewTotDelay > 1200  # Delay < 20min (avoid delaying the flight even more)
+        #C2 = TotDelay_datetime > datetime.timedelta(seconds=1200)  # Delay < 20min (avoid delaying the flight even more)
+
         # todo: add more conditions?
         ''' How to have a conditions:
             - Towable if suggested gate (to be towed to) is not remote (int = 2) or dummy (needed?)?
@@ -232,22 +233,22 @@ def mapGatesToIndices(Gates_N):
 
 # Function that reads input data and generates all relevant data structures
 def createInputData(local_path, check_output):
-    ''' Create all needed data structured required as input for the MIP or the heuristic. '''
-    flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates = import_data(local_path)
+    # Create all needed data structured required as input for the MIP or the heuristic.
+    flights, num_flights, gates, num_gates, T_timeDiff, Gates_N = import_data(local_path)
 
     # Process data
-    Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close = process_data(flightsBrussels, gatesBrussels)
+    Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close = process_data(flights, gates)
 
     # Create activities and generate successor function
-    flights_to_activities, activities_to_flights, U_successor, no_towable_flights = createActivitiesFromFlights(Flight_No, flightsBrussels)
+    flights_to_activities, activities_to_flights, U_successor, no_towable_flights = createActivitiesFromFlights(Flight_No, flights)
 
     # Create feasible gate dictionary M
-    M_validGate = build_Mdict(flightsBrussels['AC size (m)'], flightsBrussels["Pref. Int"], gatesBrussels['Max length (m)'],
-        gatesBrussels['International'], Flight_No, Gate_No)
+    M_validGate = build_Mdict(flights['AC size (m)'], flights["Pref. Int"], gates['Max length (m)'],
+        gates['International'], Flight_No, Gate_No)
 
     # Build preferences
-    P_preferences = build_preferences_dict(flightsBrussels, gatesBrussels['International'], gatesBrussels['Low cost'],
-        gatesBrussels["Close"], Flight_No, M_validGate)
+    P_preferences = build_preferences_dict(flights, gates['International'], gates['Low cost'],
+        gates["Close"], Flight_No, M_validGate)
 
     # Build shadow constraints
     shadow_constraints = build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N)
@@ -259,11 +260,11 @@ def createInputData(local_path, check_output):
     if check_output:
         # Print the first few rows of the flights data to confirm correct loading and indexing
         print("First few flights data:")
-        print(flightsBrussels.head())
+        print(flights.head())
 
         # Print the first few rows of the gates data to verify correct loading
         print("\nFirst few gates data (num_gates):")
-        print(gatesBrussels.head())
+        print(gates.head())
 
         print("\nFlight_No:", Flight_No)
         print("Gate_No:", Gate_No)
@@ -272,11 +273,9 @@ def createInputData(local_path, check_output):
         print("\nSample of T matrix (T_timeDiff):")
         print(T_timeDiff.iloc[:5, :5])
 
-        # Print details of the Gates Neighbours and Gates Distances matrices
+        # Print details of the Gates Neighbours
         print("\nGates Neighbours Matrix Sample:")
         print(Gates_N.iloc[:5, :5])
-        print("\nGates Distances Matrix Sample:")
-        print(Gates_D.iloc[:5, :5])
 
         # Print the total number of flights and gates to validate counts
         print("\nTotal number of flights:", num_flights)
@@ -301,10 +300,18 @@ def createInputData(local_path, check_output):
         print("\nShadow Constraints Sample:")
         print(shadow_constraints[:5])
 
-    return (flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates,
+    return (flights, num_flights, gates, num_gates, T_timeDiff, Gates_N,
             Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close,
+            P_preferences,
             flights_to_activities, activities_to_flights, U_successor, no_towable_flights,
             M_validGate,
-            P_preferences,
             shadow_constraints,
             gates_to_indices, indices_to_gates)
+
+
+# Configurations for data import
+LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management/Brussels.xlsm'
+LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
+LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
+LOCAL_PATH = LOCAL_PATH_Arthur
+createInputData(LOCAL_PATH, False)
