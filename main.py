@@ -25,9 +25,6 @@ def main(local_path, EstimatedOrReal):
      shadow_constraints,
      gates_to_indices, indices_to_gates) = Instance.createInputData(local_path, check_output, EstimatedOrReal)
 
-    print("HEEEEEEERE")
-    print(T_timeDiff)
-
     large_negative = vw.calculate_large_negative(activities_to_flights, Flight_No, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max)
     # weights = vw.get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max, large_negative,
     #                                          flights_to_activities, activities_to_flights, gates_to_indices, indices_to_gates)

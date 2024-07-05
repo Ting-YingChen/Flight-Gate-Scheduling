@@ -139,6 +139,7 @@ def get_weight_matrix2(num_flights, num_activities, T_timeDiff, P_preferences, M
             elif buffer_time >= 0:
                 weights[i][j] = -alpha3 * max(t_max - buffer_time, 0)  # Buffer time difference
 
+
     '''
     # Populate the weights matrix based on given rules (6)
     for i in range(len(activities_to_flights) - 1):  # Using zero-based indices

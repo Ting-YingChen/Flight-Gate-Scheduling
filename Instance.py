@@ -372,6 +372,7 @@ LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management
 LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
 LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
 LOCAL_PATH = LOCAL_PATH_Arthur
+
 (flights, num_flights, gates, num_gates, T_timeDiff, Gates_N,
  Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close,
  P_preferences,
