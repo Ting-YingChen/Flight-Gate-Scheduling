@@ -5,8 +5,15 @@ def calculate_heuristic_value(i, C, D, weights):
     """
     Calculate the heuristic value for moving vertex i from its current cluster C[i] to a new cluster D.
     """
+    for i in range(len(weights)):
+        if weights[i] == 393:
+            print('---HERE---', i)
+            #print(weights[i - 1])
+            print(weights[i])
+            #print(weights[i + 1])
     sum_weights_new_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == D)
     sum_weights_current_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == C[i] and j != i)
+
     return sum_weights_new_cluster - sum_weights_current_cluster
 
 
@@ -267,7 +274,7 @@ def apply_two_opt_step(solution, weights, C):
     return solution
 
 
-def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences):
+def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences, shadow_constraints, num_flights):
     """
     (Algorithm 3)
     Optimizes flight gate assignments by iteratively refining an initial solution through a heuristic approach.
@@ -284,7 +291,8 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
     """
     initial_solution = ['Dum'] * num_activities
     current_solution = initialize_clusters(initial_solution, num_activities, num_gates, weights)
-    best_solution = refine_clusters(current_solution, num_activities, weights)
+    # best_solution = refine_clusters(current_solution, num_activities, weights)
+    best_solution = refine_clusters(initial_solution, num_flights, num_gates, weights, shadow_constraints)
     best_score = calculate_total_score(best_solution, weights)
     print("Initial best solution and score from refinement:", best_solution, best_score)
 

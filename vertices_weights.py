@@ -1,4 +1,4 @@
-def calculate_large_negative(num_activities, Flight_No, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max):
+def calculate_large_negative(Flight_No, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max):
     """
     Calculate the large negative value used to adjust solution feasibilities in optimization models.
 
@@ -171,6 +171,13 @@ def get_weight_matrix2(num_flights, num_activities, T_timeDiff, P_preferences, M
     for i in range(num_flights, vertices):
         for j in range(i + 1, num_flights, vertices):
             weights[i][j] = large_negative
+
+    # for i in range(len(weights)):
+    #     if weights[i] == 393:
+    #         print('---HERE---', i)
+    #         print(weights[i - 1])
+    #         print(weights[i])
+    #         print(weights[i + 1])
 
     return vertices, weights
 
