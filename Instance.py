@@ -191,21 +191,21 @@ def createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal):
         is_towable = FlightIsTurnAround == "No"
 
         # map flights to activities
-        flights_to_activities[flight] = [f"arrival_{flight}", f"departure_{flight}"]
-        Udict[f"departure_{flight}"] = 0    # departures activity has no successor
+        flights_to_activities[flight] = [f"arr_{flight}", f"dep_{flight}"]
+        Udict[f"dep_{flight}"] = 0    # departures activity has no successor
         if is_towable:
             no_towable_flights += 1
             flights_to_activities[flight].append(f"parking_{flight}")
             Udict[f"arrival_{flight}"] = f"parking_{flight}"
             Udict[f"parking_{flight}"] = f"departure_{flight}"
         else:
-            Udict[f"arrival_{flight}"] = f"departure_{flight}"
+            Udict[f"arr_{flight}"] = f"dep_{flight}"
 
         # map activities to flights
-        activities_to_flights[f"arrival_{flight}"] = flight
-        activities_to_flights[f"departure_{flight}"] = flight
+        activities_to_flights[f"arr_{flight}"] = flight
+        activities_to_flights[f"dep_{flight}"] = flight
         if is_towable:
-            activities_to_flights[f"parking_{flight}"] = flight
+            activities_to_flights[f"par_{flight}"] = flight
 
     num_activities = len(activities_to_flights)
 
@@ -370,6 +370,13 @@ LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management
 LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
 LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
 LOCAL_PATH = LOCAL_PATH_Arthur
-# createInputData(LOCAL_PATH, False, "Real")
+(flights, num_flights, gates, num_gates, T_timeDiff, Gates_N,
+ Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close,
+ P_preferences,
+ flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities,
+ M_validGate,
+ shadow_constraints,
+ gates_to_indices, indices_to_gates) = createInputData(LOCAL_PATH, False, "Real")
+
 
 

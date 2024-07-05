@@ -26,12 +26,15 @@ def main(local_path, EstimatedOrReal):
      gates_to_indices, indices_to_gates) = Instance.createInputData(local_path, check_output, EstimatedOrReal)
 
 
-    large_negative = vw.calculate_large_negative(Flight_No, num_flights, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max)
-    weights = vw.get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max, large_negative,
-                                             flights_to_activities, activities_to_flights, gates_to_indices, indices_to_gates)
+    large_negative = vw.calculate_large_negative(activities_to_flights, Flight_No, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max)
+    # weights = vw.get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max, large_negative,
+    #                                          flights_to_activities, activities_to_flights, gates_to_indices, indices_to_gates)
+    weights2 = vw.get_weight_matrix2(num_flights, num_gates, num_activities, T_timeDiff, P_preferences, M_validGate,
+                       alpha1, alpha3, t_max, large_negative,
+                       activities_to_flights)
     # Note: the keys of the dictionary 'weights' are exactly the names of all vertices present in the graph!
     print("large_negative:", large_negative)
-    print("weights:", weights)
+    print("weights:", weights2)
 
     # Initialize performance records
     performance_records = {}
@@ -40,7 +43,7 @@ def main(local_path, EstimatedOrReal):
 
     # CPP Model
     # start_time = time.time()
-    # cpp_solution = cpp.build_cpp_model(weights, shadow_constraints)
+    # cpp_solution = cpp.build_cpp_model(weights2, shadow_constraints)
     # cpp_duration = time.time() - start_time
     # performance_records['CPP'] = {'duration': cpp_duration, 'solution': cpp_solution}
 
@@ -49,21 +52,21 @@ def main(local_path, EstimatedOrReal):
 
     # Iterative Refinement Heuristic Model
     start_time = time.time()
-    iterative_refinement_solution = Heuristic.iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences)
+    iterative_refinement_solution = Heuristic.iterative_refinement_gate_optimization(num_activities, num_gates, weights2, U_successor, M_validGate, P_preferences)
     iterative_refinement_duration = time.time() - start_time
     performance_records['Iterative Refinement Heuristic'] = {'duration': iterative_refinement_duration,
                                                              'solution': iterative_refinement_solution}
 
     # 2-opt Integrated Heuristic Model
     start_time = time.time()
-    integrated_solution = Heuristic.integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences)
+    integrated_solution = Heuristic.integrated_2opt_gate_optimization(num_activities, num_gates, weights2, U_successor, M_validGate, P_preferences)
     integrated_duration = time.time() - start_time
     performance_records['Integrated 2-opt Heuristic'] = {'duration': integrated_duration,
                                                          'solution': integrated_solution}
 
     # Pre-optimized 2-opt Gate Assignment Model
     start_time = time.time()
-    pre_optimized_solution = Heuristic.pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences)
+    pre_optimized_solution = Heuristic.pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights2, U_successor, M_validGate, P_preferences)
     pre_optimized_duration = time.time() - start_time
     performance_records['Pre-optimized 2-opt'] = {'duration': pre_optimized_duration,
                                                   'solution': pre_optimized_solution}
