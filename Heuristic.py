@@ -2,15 +2,7 @@ import numpy as np
 
 
 def calculate_heuristic_value(i, C, D, weights):
-    """
-    Calculate the heuristic value for moving vertex i from its current cluster C[i] to a new cluster D.
-    """
-    for i in range(len(weights)):
-        if weights[i] == 393:
-            print('---HERE---', i)
-            #print(weights[i - 1])
-            print(weights[i])
-            #print(weights[i + 1])
+    """ Calculate the heuristic value for moving vertex i from its current cluster C[i] to a new cluster D """
     sum_weights_new_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == D)
     sum_weights_current_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == C[i] and j != i)
 
@@ -215,7 +207,8 @@ def refine_clusters(initial_clusters, num_flights, num_gates, weights, shadow_co
                 if D != current_cluster and (i, D) not in tabu_list:
                     if is_move_feasible(i, D, current_solution, shadow_constraints):
 
-                        potential_improvement = calculate_heuristic_value(no_nodes, weights)
+                        # potential_improvement = calculate_heuristic_value(no_nodes, weights)
+                        potential_improvement = calculate_heuristic_value(i, current_cluster, D, weights)
                         # print(f"Evaluating move of Vertex {i} from Cluster {current_cluster} to Cluster {D}: Improvement {current_improvement}")
 
                         if potential_improvement > best_improvement:
