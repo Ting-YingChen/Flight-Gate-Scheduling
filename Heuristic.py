@@ -4,11 +4,11 @@ def calculate_heuristic_value(i, C, D, weights):
     """
     Calculate the heuristic value for moving vertex i from its current cluster C[i] to a new cluster D.
     """
-    print("-----------------ABC------------------")
-    print(weights, "---------", len(weights))
-    print("JE SUIS ICI")
-    print(C, "---------", len(C))
-    print("-----------------DEF------------------")
+    # print("-----------------ABC------------------")
+    # print(weights, "---------", len(weights))
+    # print("JE SUIS ICI")
+    # print(C, "---------", len(C))
+    # print("-----------------DEF------------------")
     sum_weights_new_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == D)
     sum_weights_current_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == C[i] and j != i)
     return sum_weights_new_cluster - sum_weights_current_cluster
