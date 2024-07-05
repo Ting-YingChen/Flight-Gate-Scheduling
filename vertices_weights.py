@@ -1,5 +1,5 @@
 
-def calculate_large_negative(Flight_No, num_flights, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max):
+def calculate_large_negative(no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max, activities_to_flights):
     """
     Calculate the large negative value used to adjust solution feasibilities in optimization models.
 
@@ -14,13 +14,15 @@ def calculate_large_negative(Flight_No, num_flights, no_towable_flights, T_timeD
     Returns:
         int: The calculated large negative value to be used in optimization constraints.
     """
-
+    num_activities = len(activities_to_flights)  # Calculate the number of activities dynamically
 
     # Calculate the minimum possible alpha1 preferences by choosing the least preferred gate (alpha1)
     min_preferences = []
-    for flight in Flight_No: # Flight_No starts from 1
-        flight_min_pref = min(alpha1 * P_preferences[flight][gate] for gate in M_validGate[flight])
-        min_preferences.append(flight_min_pref)
+    for activity in activities_to_flights:
+        flight = activities_to_flights[activity]
+        if activity in P_preferences and flight in M_validGate:
+            flight_min_pref = min(alpha1 * P_preferences[flight][gate] for gate in M_validGate[flight] if gate in P_preferences[activity])
+            min_preferences.append(flight_min_pref)
         # print(f"Flight {flight}: Min preference = {flight_min_pref}")
     total_min_preferences = sum(min_preferences)
     print(f"Total minimum preferences: {total_min_preferences}")
@@ -31,9 +33,9 @@ def calculate_large_negative(Flight_No, num_flights, no_towable_flights, T_timeD
 
     # Calculate the maximum possible alpha3 penalties when all flights have the least buffer time (alpha3)
     max_buffer_penalties = 0
-    for i in Flight_No:
-        for j in Flight_No:
-            if i != j:
+    for i in activities_to_flights:
+        for j in activities_to_flights:
+            if i != j and i in T_timeDiff and j in T_timeDiff[i]:
                 if T_timeDiff[i][j] < t_max and T_timeDiff[i][j] > 0:
                     penalty_value = alpha3 * (t_max - T_timeDiff[i][j])
                     max_buffer_penalties += penalty_value
@@ -54,10 +56,11 @@ def calculate_large_negative(Flight_No, num_flights, no_towable_flights, T_timeD
 # print("Recommended large_negative value:", large_negative)
 
 
-def get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max, large_negative,
-                      flights_to_activities, activities_to_flights, gates_to_indices, indices_to_gates):
-    # Initialize the edge weights matrix
-    num_flights = len(Flight_No)
+def get_weight_matrix(activities_to_flights, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3,
+                      t_max, large_negative, gates_to_indices, indices_to_gates):
+    """
+    Generate a weight matrix for activities, considering interactions between activities and gates.
+    """
 
     # 0. initialize empty weight matrix
     weights = {}
@@ -77,7 +80,7 @@ def get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_success
             activity_j = list(activities_to_flights.keys())[j]
             flight_j = activities_to_flights[activity_j]
             # 1.1 If activities belong to different flights and overlap in time: assign large negative
-            if T_timeDiff[flight_i][flight_j] < 0:  # Activities overlap in time
+            if T_timeDiff[i][j] < 0:  # Activities overlap in time
                 weights[activity_i][activity_j] = large_negative
                 weights[activity_j][activity_i] = large_negative
             else:
@@ -87,7 +90,7 @@ def get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_success
                     weights[activity_j][activity_i] = alpha2
                 # 1.3 if activities do not overlap and do not succeed each other: set weight to -alpha3*excess buffer time
                 else:
-                    excess_buffer_time = max(t_max - T_timeDiff[flight_i][flight_j], 0)
+                    excess_buffer_time = max(t_max - T_timeDiff[i][j], 0)
                     weights[activity_i][activity_j] = excess_buffer_time
                     weights[activity_j][activity_i] = excess_buffer_time
 
