@@ -12,12 +12,14 @@ def import_data(local_path, EstimatedOrReal):
     num_gates = len(gates)
 
     # T Matrix (Time Differences)
-    T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:PK', header=0, index_col=0, nrows=num_flights)
-    T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:OD', header=0, index_col=0, nrows=num_flights)
+    T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:PK', header=0, index_col=0)
+    T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:OD', header=0, index_col=0)
     if EstimatedOrReal == "Estimated":
         T_timeDiff = T_timeDiff_Estim
+        num_activities = len(T_timeDiff_Estim)
     elif EstimatedOrReal == "Real":
         T_timeDiff = T_timeDiff_Real
+        num_activities = len(T_timeDiff_Real)
 
     # Gates Neighbours and Distances
     Gates_N = pd.read_excel(local_path, sheet_name='EBBR - Gates (next)', usecols='A:DA', header=0, index_col=0, nrows=num_gates)
@@ -207,7 +209,7 @@ def createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal):
         if is_towable:
             activities_to_flights[f"par_{flight}"] = flight
 
-    num_activities = len(activities_to_flights)
+    num_activities = len(myActivities)
 
     return flights_to_activities, activities_to_flights, Udict, no_towable_flights, num_activities
 

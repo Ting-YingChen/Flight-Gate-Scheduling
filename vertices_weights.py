@@ -32,10 +32,6 @@ def calculate_large_negative(num_activities, Flight_No, no_towable_flights, T_ti
     myActivities = T_timeDiff.columns.tolist()
     for i in myActivities:
         for j in myActivities:
-            if i == "dep_77" or j == "dep_77":
-                print('----------------------------------------------------------------------')
-                print(i)
-                print(j)
             buffer_time = T_timeDiff.loc[i, j]
             if i != j and 0 < buffer_time < t_max:
                 penalty_value = alpha3 * (t_max - buffer_time)
@@ -119,11 +115,12 @@ def get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_success
 
     return vertices, weights
 
-def get_weight_matrix2(num_flights, num_gates, num_activities, T_timeDiff, P_preferences, M_validGate,
+def get_weight_matrix2(num_flights, num_activities, T_timeDiff, P_preferences, M_validGate,
                        alpha1, alpha3, t_max, large_negative,
                        activities_to_flights):
     # Initialize the edge weights matrix
-    vertices = num_flights + num_gates - 1  # (5)
+    # vertices = num_flights + num_gates - 1  # (5)
+    vertices = num_activities
     weights = [[0] * vertices for _ in range(vertices)]
 
     # Iterate through pairs of activities to set the weights based on temporal overlaps
@@ -138,7 +135,7 @@ def get_weight_matrix2(num_flights, num_gates, num_activities, T_timeDiff, P_pre
             # 1. if buffer time negative: activities overlap -> set edge weight to -large number
             # If activities belong to different flights and overlap in time: assign large negative
             if flight_i != flight_j and buffer_time < 0:  # Activities overlap in time
-                weights[activity_i][activity_j] = large_negative
+                weights[i][j] = large_negative
             elif buffer_time >= 0:
                 weights[i][j] = -alpha3 * max(t_max - buffer_time, 0)  # Buffer time difference
 
