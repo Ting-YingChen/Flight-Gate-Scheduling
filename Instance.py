@@ -2,9 +2,9 @@ import pandas as pd
 import datetime
 
 # Data Import Functions
-def import_data(local_path):
+def import_data(local_path, EstimatedOrReal):
     # Flights
-    flights = pd.read_excel(local_path, sheet_name='EBBR - Flights', usecols='A:Z', header=1, index_col=0)
+    flights = pd.read_excel(local_path, sheet_name='EBBR - Flights', usecols='A:AV', header=1, index_col=0)
     num_flights = len(flights)
 
     # Gates
@@ -12,9 +12,12 @@ def import_data(local_path):
     num_gates = len(gates)
 
     # T Matrix (Time Differences)
-    T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:FP', header=0, index_col=0, nrows=num_flights)
-    T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:FP', header=0, index_col=0, nrows=num_flights)
-    T_timeDiff = T_timeDiff_Estim   # Change as preferred
+    T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:PK', header=0, index_col=0, nrows=num_flights)
+    T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:OD', header=0, index_col=0, nrows=num_flights)
+    if EstimatedOrReal == "Estimated":
+        T_timeDiff = T_timeDiff_Estim
+    elif EstimatedOrReal == "Real":
+        T_timeDiff = T_timeDiff_Real
 
     # Gates Neighbours and Distances
     Gates_N = pd.read_excel(local_path, sheet_name='EBBR - Gates (next)', usecols='A:DA', header=0, index_col=0, nrows=num_gates)
@@ -22,7 +25,9 @@ def import_data(local_path):
     return flights, num_flights, gates, num_gates, T_timeDiff, Gates_N
 
 # # Import data
-# flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates = import_data(LOCAL_PATH)
+# EstimatedOrReal = "Estimated"
+# EstimatedOrReal = "Real"
+# flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates = import_data(LOCAL_PATH, EstimatedOrReal)
 
 
 
@@ -103,7 +108,7 @@ def build_preferences_dict(flights, Is_Int, Is_LowCost, Is_Close, Flight_No, M_v
 
 
 # Creation of activities for each flight
-def createActivitiesFromFlights(Flight_No, flights):
+def createActivitiesFromFlights_Python(Flight_No, flights):
     '''map flights to activities (arrivals, departures, parking [if possible]).
     also creates a successor dictionary udict.
     '''
@@ -162,8 +167,56 @@ def createActivitiesFromFlights(Flight_No, flights):
 
     return flights_to_activities, activities_to_flights, Udict, no_towable_flights, num_activities
 
+
+
+def createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal):
+    '''map flights to activities (arrivals, departures, parking [if possible]).
+    also creates a successor dictionary udict.
+    '''
+    flights_to_activities = {} # keys: flight no., values: list of all activities associated with respective flight
+    activities_to_flights = {} # inverse dictionary of flights_to_activities
+    Udict = {}
+    no_towable_flights = 0  # counts the number of flights that can theoretically be towed
+
+    if EstimatedOrReal == "Estimated":
+        ColumnCheckTurnaround = 35
+    elif EstimatedOrReal == "Real":
+        ColumnCheckTurnaround = 46
+
+    myActivities = T_timeDiff.columns.tolist()  # Get all activities
+    myFlightsList = sorted(set([int(e[4:]) for e in myActivities])) # activities from the excel start with arr_, dep_ or par_ -> remove the 1st four characters'
+
+    for flight in myFlightsList:
+        FlightIsTurnAround = flights.iloc[flight-1, ColumnCheckTurnaround]
+        is_towable = FlightIsTurnAround == "No"
+
+        # map flights to activities
+        flights_to_activities[flight] = [f"arrival_{flight}", f"departure_{flight}"]
+        Udict[f"departure_{flight}"] = 0    # departures activity has no successor
+        if is_towable:
+            no_towable_flights += 1
+            flights_to_activities[flight].append(f"parking_{flight}")
+            Udict[f"arrival_{flight}"] = f"parking_{flight}"
+            Udict[f"parking_{flight}"] = f"departure_{flight}"
+        else:
+            Udict[f"arrival_{flight}"] = f"departure_{flight}"
+
+        # map activities to flights
+        activities_to_flights[f"arrival_{flight}"] = flight
+        activities_to_flights[f"departure_{flight}"] = flight
+        if is_towable:
+            activities_to_flights[f"parking_{flight}"] = flight
+
+    num_activities = len(activities_to_flights)
+
+    return flights_to_activities, activities_to_flights, Udict, no_towable_flights, num_activities
+
+
 # # Create flight activities
-# flights_to_activities, activities_to_flights, U_successor = createActivitiesFromFlights(Flight_No, flightsBrussels)
+#flights_to_activities, activities_to_flights, U_successor = createActivitiesFromFlights_Python(Flight_No, flights)
+#EstimatedOrReal = "Estimated"
+#EstimatedOrReal = "Real"
+#flights_to_activities, activities_to_flights, U_successor = createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal)
 
 
 
@@ -234,15 +287,16 @@ def mapGatesToIndices(Gates_N):
     return gates_to_indices, indices_to_gates
 
 # Function that reads input data and generates all relevant data structures
-def createInputData(local_path, check_output):
+def createInputData(local_path, check_output, EstimatedOrReal):
     # Create all needed data structured required as input for the MIP or the heuristic.
-    flights, num_flights, gates, num_gates, T_timeDiff, Gates_N = import_data(local_path)
+    flights, num_flights, gates, num_gates, T_timeDiff, Gates_N = import_data(local_path, EstimatedOrReal)
 
     # Process data
     Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close = process_data(flights, gates)
 
     # Create activities and generate successor function
-    flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities = createActivitiesFromFlights(Flight_No, flights)
+    #flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities = createActivitiesFromFlights_Python(Flight_No, flights)
+    flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities = createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal)
 
     # Create feasible gate dictionary M
     M_validGate = build_Mdict(flights['AC size (m)'], flights["Pref. Int"], gates['Max length (m)'],
@@ -316,4 +370,6 @@ LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management
 LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
 LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
 LOCAL_PATH = LOCAL_PATH_Arthur
-createInputData(LOCAL_PATH, False)
+# createInputData(LOCAL_PATH, False, "Real")
+
+

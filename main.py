@@ -6,7 +6,7 @@ import CPP_MIP as cpp
 import FGS_MIP as fgs
 import Heuristic
 
-def main(local_path):
+def main(local_path, EstimatedOrReal):
     # 0. define all relevant model parameters
     # Parameters based on experiences
     alpha1 = 1  # Preference scaling factor
@@ -23,7 +23,7 @@ def main(local_path):
      flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities,
      M_validGate,
      shadow_constraints,
-     gates_to_indices, indices_to_gates) = Instance.createInputData(local_path, check_output)
+     gates_to_indices, indices_to_gates) = Instance.createInputData(local_path, check_output, EstimatedOrReal)
 
 
     large_negative = vw.calculate_large_negative(Flight_No, num_flights, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max)
@@ -79,4 +79,6 @@ LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Br
 LOCAL_PATH = LOCAL_PATH_Arthur
 
 if __name__ == "__main__":
-    main(LOCAL_PATH)
+    EstimatedOrReal = "Estimated"
+    EstimatedOrReal = "Real"
+    main(LOCAL_PATH, EstimatedOrReal)
