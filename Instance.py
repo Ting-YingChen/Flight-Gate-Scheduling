@@ -197,9 +197,9 @@ def createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal):
         Udict[f"dep_{flight}"] = 0    # departures activity has no successor
         if is_towable:
             no_towable_flights += 1
-            flights_to_activities[flight].append(f"parking_{flight}")
-            Udict[f"arrival_{flight}"] = f"parking_{flight}"
-            Udict[f"parking_{flight}"] = f"departure_{flight}"
+            flights_to_activities[flight].append(f"par_{flight}")
+            Udict[f"arr_{flight}"] = f"par_{flight}"
+            Udict[f"par_{flight}"] = f"dep_{flight}"
         else:
             Udict[f"arr_{flight}"] = f"dep_{flight}"
 
