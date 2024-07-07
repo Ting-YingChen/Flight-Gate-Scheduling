@@ -76,7 +76,7 @@ def get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_success
             activity_j = list(activities_to_flights.keys())[j]
             flight_j = activities_to_flights[activity_j]
             # 1.1 If activities belong to different flights and overlap in time: assign large negative
-            if T_timeDiff[flight_i][flight_j] < 0:  # Activities overlap in time
+            if T_timeDiff.iloc[activity_i][activity_j] < 0:  # Activities overlap in time
                 weights[activity_i][activity_j] = large_negative
                 weights[activity_j][activity_i] = large_negative
             else:
@@ -86,7 +86,7 @@ def get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_success
                     weights[activity_j][activity_i] = alpha2
                 # 1.3 if activities do not overlap and do not succeed each other: set weight to -alpha3*excess buffer time
                 else:
-                    excess_buffer_time = max(t_max - T_timeDiff[flight_i][flight_j], 0)
+                    excess_buffer_time = max(t_max - T_timeDiff.iloc[activity_i][activity_j], 0)
                     weights[activity_i][activity_j] = excess_buffer_time
                     weights[activity_j][activity_i] = excess_buffer_time
 

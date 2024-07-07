@@ -7,7 +7,7 @@ import CPP_MIP as cpp
 import FGS_MIP as fgs
 import Heuristic
 
-def main():
+def main(local_path, EstimatedOrReal):
     # 0. define all relevant model parameters
     # Parameters based on experiences
     alpha1 = 1  # Preference scaling factor
@@ -15,18 +15,12 @@ def main():
     alpha3 = 100  # Penalty scaling factor for buffer time deficits
     t_max = 30
 
-    # load excel file and create all relevant data structures
-    LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management/Brussels.xlsm'
-    LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
-    LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
-
-    LOCAL_PATH = LOCAL_PATH_TingYing
     check_output = False
 
     # Import data
     flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates, Flight_No, Gate_No, ETA, ETD, P_preferences, \
         flights_to_activities, activities_to_flights, num_activities, U_successor, M_validGate, shadow_constraints, no_towable_flights,\
-        gates_to_indices, indices_to_gates = instance_TYorganised.createInputData(LOCAL_PATH, check_output)
+        gates_to_indices, indices_to_gates = Instance.createInputData(LOCAL_PATH, check_output)
 
     large_negative = vw.calculate_large_negative(Flight_No, num_flights, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max)
     weights = vw.get_weight_matrix(Flight_No, num_gates, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max, large_negative,
@@ -74,6 +68,11 @@ def main():
     for model, record in performance_records.items():
         print(f"{model} took {record['duration']} seconds and produced solution {record['solution']}")
 
+# Configurations for data import
+LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management/Brussels.xlsm'
+LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
+LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels copy.xlsm'
+LOCAL_PATH = LOCAL_PATH_Arthur
 
 if __name__ == "__main__":
     main()
