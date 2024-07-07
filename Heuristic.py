@@ -20,18 +20,8 @@ def calculate_total_score(solution, weights):
     """
     score = 0
     for cluster in solution:    # cluster or clique
-        print('---------')
-        print(f'Cluster is: {cluster}, and his values are {solution[cluster]}')
-        for i in cluster:
-            if i == "D":
-                print(f'The problematic cluster is {cluster}')
-            else:
-                print('No problem')
-        score += sum(weights[i][j] for i in cluster for j in cluster if i != j)
-        # for i in cluster:
-        #     for j in cluster:
-        #         if solution[i] == solution[j] and solution[i] != 'Dum':
-        #             score += weights[i][j]
+        clusterActivities = solution[cluster]
+        score += sum(weights[i][j] for i in clusterActivities for j in clusterActivities if i != j)
 
     return score
 
