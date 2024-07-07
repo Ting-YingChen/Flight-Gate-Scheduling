@@ -1,24 +1,38 @@
 import numpy as np
 
 
-def calculate_heuristic_value(i, C, D, weights):
+def calculate_heuristic_value(i, C, D, weights, activities_to_flights, gates_to_indices):
     """ Calculate the heuristic value for moving vertex i from its current cluster C[i] to a new cluster D """
-    sum_weights_new_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == D)
-    sum_weights_current_cluster = sum(weights[i][j] for j in range(len(weights)) if C[j] == C[i] and j != i)
+    # C = current cluster
+    # D = new (possibly empty) cluster
+
+    sum_weights_new_cluster = sum(weights[i][j] for j in D if j != 'Dum')
+    sum_weights_current_cluster = sum(weights[i][j] for j in C if (j != i and j != 'Dum'))
 
     return sum_weights_new_cluster - sum_weights_current_cluster
 
 
 def calculate_total_score(solution, weights):
-    """
-    Calculate the total score of the current solution based on the weights matrix.
+    """ Calculate the total score of the current solution based on the weights matrix.
+    Paper p.294, ultimate paragraph: "The CPP is to find an equivalence relation on V so that the sum of the edge
+    weights of all vertices IN RELATION is maximized. This is equivalent to finding a partition of V into cliques,
+    i.e., a vertex subset, so that the sum of the edge weights WITHIN the cliques is maximized. "
     """
     score = 0
-    for i in range(len(weights)):
-        for j in range(i + 1, len(weights)):
-            if solution[i] == solution[j] and solution[i] != 'Dum':
-                score += weights[i][j]
-                # Do I need to consider succeor here?
+    for cluster in solution:    # cluster or clique
+        print('---------')
+        print(f'Cluster is: {cluster}, and his values are {solution[cluster]}')
+        for i in cluster:
+            if i == "D":
+                print(f'The problematic cluster is {cluster}')
+            else:
+                print('No problem')
+        score += sum(weights[i][j] for i in cluster for j in cluster if i != j)
+        # for i in cluster:
+        #     for j in cluster:
+        #         if solution[i] == solution[j] and solution[i] != 'Dum':
+        #             score += weights[i][j]
+
     return score
 
 
@@ -119,7 +133,7 @@ def initialize_clusters(initial_solution, num_flights, num_gates, weights):
 '''
 
 
-def initialize_clusters(initial_solution, num_activities, num_gates, weights):
+def initialize_clusters2(initial_solution, num_activities, num_gates, weights):
     """
     (Algorithm 2)
     Generates an initial solution for gate assignments by iteratively assigning activities to gates
@@ -161,6 +175,70 @@ def initialize_clusters(initial_solution, num_activities, num_gates, weights):
     return solution
 
 
+def initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor):
+    """
+    (Algorithm 2)
+    Generates an initial solution for gate assignments by iteratively assigning activities to gates
+    that provide the best heuristic improvement. This greedy approach helps establish a starting point
+    for further optimization processes.
+
+    Parameters:
+        weights (list of lists): Matrix representing the interaction costs or benefits between activities and gates.
+        others: required for functions used inside.
+
+    Returns:
+        list: An initial gate assignment solution, where each activity is assigned to an optimal starting gate.
+
+    """
+    activities = list(activities_to_flights.keys())     # ['arr_1', 'dep_1', ...]
+    gates = list(gates_to_indices.keys())               # ['120', '122', ...]
+    C_list = activities + gates                         # ['arr_1', 'dep_1', ..., '120', '122', ...] (initial cluster)
+    C_dict = {}     # current Cluster
+    # for i in range(len(Vertices)):
+    #     C_dict[f'C{i+1}'] = [C_list[i]]   # { 'C1': ['arr_1'], 'C2': ['dep_1'], ... }
+
+    D_clusters = {f'D{i+1}': [gates[i]] for i in range(len(gates))}        # { 'D1': ['120'], 'D2': ['122'], ... }
+    D_clusters['Dummy'] = ['Dum']
+
+    '''
+    for non_tabu_Activities, paper says U(i) != 0 and U(U(i)) != 0 means arrival, but we have some arrivals for whom their departure has no successor
+    -> commented lines should be used for the paper, but uncommented lines are used for our specific instance
+    '''
+    # non_tabu_Activities = [i for i in C_list if (U_successor[i] !=0 and U_successor[U_successor[i]] != 0)]
+    non_tabu_Activities = [activity for activity in C_list if activity[0:3] == 'arr']
+    non_tabu = len(non_tabu_Activities)
+
+    while non_tabu > 0:
+        i = non_tabu_Activities[0]      # Check first non_tabu activity
+        best_improvement = -np.inf
+
+        for D in D_clusters:
+            D_key = D
+            D_list = D_clusters[D_key]      # = ['gate'] or D = ['gate', i, Ui, UUi], or D = ['gate', i1, Ui1, UUi1, i2, Ui2, UUi2, ...] or ...
+            Ui = U_successor[i]
+            # UUi = U_successor[U_successor[i]]
+
+            h1 = calculate_heuristic_value(i, C_list, D_list, weights, activities_to_flights, gates_to_indices)
+            h2 = calculate_heuristic_value(Ui, C_list, D_list, weights, activities_to_flights, gates_to_indices)
+            # h3 = calculate_heuristic_value(UUi, C_list, D_list, weights, activities_to_flights, gates_to_indices)
+            # improvement = h1 + h2 + h3
+            improvement = h1 + h2
+            if improvement > best_improvement:
+                best_improvement = improvement
+                D_star_value = D_list
+                D_star_key = D_key
+
+        if best_improvement > 0:
+            # D_star_value.extend([i, Ui, UUi])
+            D_star_value.extend([i, Ui])
+            D_clusters[D_star_key] = D_star_value
+
+        del non_tabu_Activities[0]
+        non_tabu -= 1
+
+    return D_clusters
+
+
 def refine_clusters(initial_clusters, num_flights, num_gates, weights, shadow_constraints):
     """
     (Algorithm 1)
@@ -185,8 +263,8 @@ def refine_clusters(initial_clusters, num_flights, num_gates, weights, shadow_co
     no_nodes = len(weights)
 
     # Initialization
-    current_solution = initial_clusters[:]
-    best_solution = current_solution[:]
+    current_solution = initial_clusters
+    best_solution = current_solution
     best_score = calculate_total_score(current_solution, weights)
     tabu_list = set()
     iteration = 0
@@ -267,7 +345,9 @@ def apply_two_opt_step(solution, weights, C):
     return solution
 
 
-def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences, shadow_constraints, num_flights):
+def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                                           shadow_constraints, num_flights,
+                                           activities_to_flights, gates_to_indices):
     """
     (Algorithm 3)
     Optimizes flight gate assignments by iteratively refining an initial solution through a heuristic approach.
@@ -282,10 +362,9 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
     Returns:
         list: Best found solution.
     """
-    initial_solution = ['Dum'] * num_activities
-    current_solution = initialize_clusters(initial_solution, num_activities, num_gates, weights)
+    current_solution = initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor)
     # best_solution = refine_clusters(current_solution, num_activities, weights)
-    best_solution = refine_clusters(initial_solution, num_flights, num_gates, weights, shadow_constraints)
+    best_solution = refine_clusters(current_solution, num_flights, num_gates, weights, shadow_constraints)
     best_score = calculate_total_score(best_solution, weights)
     print("Initial best solution and score from refinement:", best_solution, best_score)
 
@@ -315,7 +394,8 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
     return best_solution
 
 
-def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences):
+def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                                         activities_to_flights, gates_to_indices):
     """
     Optimizes gate assignments by integrating a 2-opt optimization step immediately after initial clustering.
     This method begins by assigning all activities to a 'dummy' gate, then applies a 2-opt algorithm to improve the initial
@@ -328,8 +408,7 @@ def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_s
     Returns:
         list: The best gate assignment solution found.
     """
-    initial_solution = ['Dum'] * num_activities
-    current_solution = initialize_clusters(initial_solution, num_activities, num_gates, weights)
+    current_solution = initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor)
     best_solution = refine_clusters(current_solution, num_activities, weights)
     best_score = calculate_total_score(best_solution, weights)
 
@@ -354,7 +433,8 @@ def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_s
     return best_solution
 
 
-def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences):
+def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                                      activities_to_flights, gates_to_indices):
     """
     Optimizes gate assignments by integrating a 2-opt strategy with heuristic refinement.
     Begins with an initial setup where all activities are assigned to a 'dummy' gate, followed by a 2-opt optimization
@@ -365,8 +445,7 @@ def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_succ
     Returns:
         list: Best found solution.
     """
-    initial_solution = ['Dum'] * num_activities
-    current_solution = initialize_clusters(initial_solution, num_activities, num_gates, weights)
+    current_solution = initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor)
     best_solution = apply_two_opt_step(current_solution, weights, U_successor)  # Apply 2-opt optimization here
     best_score = calculate_total_score(best_solution, weights)
 

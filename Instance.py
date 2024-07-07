@@ -381,5 +381,3 @@ LOCAL_PATH = LOCAL_PATH_Arthur
  shadow_constraints,
  gates_to_indices, indices_to_gates) = createInputData(LOCAL_PATH, False, "Real")
 
-
-

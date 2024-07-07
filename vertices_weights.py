@@ -1,3 +1,4 @@
+import Instance
 def calculate_large_negative(activities_to_flights, num_activities, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max):
     """
         Calculate the large negative value used to adjust solution feasibilities in optimization models.
@@ -181,6 +182,27 @@ def get_weight_matrix3(num_activities, activities_to_flights, T_timeDiff, P_pref
 
 
 # Example usage:
-# vertices, weights = get_weight_matrix(num_flights, num_gates, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3, t_max, large_negative)
-# print("vertices: ", vertices)
-# print("Sample weights matrix section:", weights[:5][:5])
+def TryThingsOut():
+    alpha1 = 1  # Preference scaling factor
+    alpha2 = 20  # Reward for avoiding tows
+    alpha3 = 100  # Penalty scaling factor for buffer time deficits
+    t_max = 30
+    local_path = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
+    (flights, num_flights, gates, num_gates, T_timeDiff, Gates_N,
+         Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close,
+         P_preferences,
+         flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities,
+         M_validGate,
+         shadow_constraints,
+         gates_to_indices, indices_to_gates) = Instance.createInputData(local_path, False, "Real")
+    large_negative = calculate_large_negative(activities_to_flights, num_activities, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max)
+    weights = get_weight_matrix3(num_activities, activities_to_flights, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3,
+                          t_max, large_negative, gates_to_indices, indices_to_gates)
+
+
+    print(f"Here: {weights}")
+
+    return
+
+TryThingsOut()
+
