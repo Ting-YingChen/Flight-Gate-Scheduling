@@ -149,11 +149,12 @@ def get_weight_matrix3(num_activities, activities_to_flights, T_timeDiff, P_pref
                 if U_successor[activity_i] == activity_j or U_successor[activity_j] == activity_i:
                     weights[activity_i][activity_j] = alpha2
                     weights[activity_j][activity_i] = alpha2
-                # 1.3 if activities do not overlap and do not succeed each other: set weight to -alpha3*excess buffer time
+                # 1.3 if activities do not overlap and do not succeed each other: set weight to -alpha3*excess buffer time#
+                # <=> penalty for having not enough buffer time
                 else:
                     excess_buffer_time = max(t_max - T_timeDiff.iloc[i, j], 0)
-                    weights[activity_i][activity_j] = excess_buffer_time
-                    weights[activity_j][activity_i] = excess_buffer_time
+                    weights[activity_i][activity_j] = -alpha3*excess_buffer_time
+                    weights[activity_j][activity_i] = -alpha3*excess_buffer_time
 
     # 2. weights between activity and gate nodes
     for i in range(num_activities):
@@ -204,5 +205,6 @@ def TryThingsOut():
 
     return
 
-TryThingsOut()
+if __name__ == "__main__":
+    TryThingsOut()
 
