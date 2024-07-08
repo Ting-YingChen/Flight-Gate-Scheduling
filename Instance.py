@@ -380,19 +380,21 @@ LOCAL_PATH = LOCAL_PATH_Arthur
  gates_to_indices, indices_to_gates) = createInputData(LOCAL_PATH, False, "Real")
 
 
-max = 0
-maxA = ''
-for activity1 in list(activities_to_flights.keys()):
-    simultaneous_flights = 0
-    for activity2 in list(activities_to_flights.keys()):
-        c1 = T_timeDiff.loc[activity1, activity2] < 0      # Indirectly verifies that activity2 != activity1
-        fligth1 = activities_to_flights[activity1]
-        flight2 = activities_to_flights[activity2]
-        c2 = fligth1 != flight2
-        c3 = activity1[0:2] != activity2[0:2]              # If arr_1 overlaps with arr_2 and dep_1 overlaps with dep_2, that is only 1 overlap of flights, not 2)
-        if c1 and c2:
-            simultaneous_flights += 1
-    if simultaneous_flights > max:
-        max = simultaneous_flights
-        maxA = fligth1
-print("Max simul = ", max, maxA)    # Says 226, >171 ...
+def simulatenous_flights():
+    max = 0
+    maxA = ''
+    for activity1 in list(activities_to_flights.keys()):
+        simultaneous_flights = 0
+        for activity2 in list(activities_to_flights.keys()):
+            c1 = T_timeDiff.loc[activity1, activity2] < 0      # Indirectly verifies that activity2 != activity1
+            fligth1 = activities_to_flights[activity1]
+            flight2 = activities_to_flights[activity2]
+            c2 = fligth1 != flight2
+            c3 = activity1[0:2] != activity2[0:2]              # If arr_1 overlaps with arr_2 and dep_1 overlaps with dep_2, that is only 1 overlap of flights, not 2)
+            if c1 and c2:
+                simultaneous_flights += 1
+        if simultaneous_flights > max:
+            max = simultaneous_flights
+            maxA = fligth1
+    print("Max simul = ", max, maxA)    # Says 226, >171 ...
+    return
