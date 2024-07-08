@@ -3,6 +3,34 @@ import time
 import copy
 import random
 
+
+
+def convert_sc_to_dicts(shadow_constraints):
+    '''Convert shadow constraint list into easier-to-access dictionaries.
+    '''
+    sc_per_flight_gate_pair = {}
+    sc_per_gate = {}
+
+    for (f1, g1, f2, g2) in shadow_constraints:
+        # dictionary with keys = tuples of flight and gate
+        if (f1, g1) not in sc_per_flight_gate_pair:
+            sc_per_flight_gate_pair[(f1, g1)] = []
+        sc_per_flight_gate_pair[(f1, g1)].append((f2, g2))
+        if (f2, g2) not in sc_per_flight_gate_pair:
+            sc_per_flight_gate_pair[(f2, g2)] = []
+        sc_per_flight_gate_pair[(f2, g2)].append((f1, g1))
+
+        # dictionary with keys = gates
+        if g1 not in sc_per_gate:
+            sc_per_gate[g1] = []
+        sc_per_gate[g1].append((f1, f2, g2))
+        if g2 not in sc_per_gate:
+            sc_per_gate[g2] = []
+        sc_per_gate[g2].append((f2, f1, g1))
+
+
+    return sc_per_flight_gate_pair, sc_per_gate
+
 def calculate_heuristic_value(i, C, D, weights, activities_to_flights, gates_to_indices):
     """ Calculate the heuristic value for moving vertex i from its current cluster C[i] to a new cluster D """
     # C = current cluster (list of all vertices of that cluster)
@@ -73,7 +101,7 @@ def is_move_feasible(i, proposed_gate, solution, shadow_constraints, flights_to_
     return True
 
 def is_move_feasible_new(vertex, current_solution, current_cluster, target_cluster, shadow_constraints, flights_to_activities, activities_to_flights,
-                         nodes_to_clusters):
+                         nodes_to_clusters, sc_per_flight_gate_pair, sc_per_gate):
     """
     Checks if moving flight `i` to `proposed_gate` violates any shadow constraints.
     New version that also considers situations where gate vertices are moved.
@@ -100,42 +128,59 @@ def is_move_feasible_new(vertex, current_solution, current_cluster, target_clust
             target_gate = target_gates_list[0]
 
         # check all relevant shadow restrictions for violation
-        for (f1, g1, f2, g2) in shadow_constraints:
-            # only need to consider shadow constraints where the target flight is assigned to the target gate
-            is_relevant = False
-            if (f1, g1) == (target_flight, target_gate):
-                other_flight, other_gate = f2, g2
-                is_relevant = True
-            elif (f2, g2) == (target_flight, target_gate):
-                other_flight, other_gate = f1, g1
-                is_relevant = True
-            if is_relevant:
-                # check if other_flight is assigned to other_gate. If this is the case: constraint violated -> return False
-                for activity in flights_to_activities[other_flight]:
-                    if nodes_to_clusters[activity] == nodes_to_clusters[other_gate]:
-                        return False
+        for (f2, g2) in sc_per_flight_gate_pair[(target_flight, target_gate)]:
+            for activity in flights_to_activities[f2]:
+                if nodes_to_clusters[activity] == nodes_to_clusters[g2]:
+                    return False
+
+        # for (f1, g1, f2, g2) in shadow_constraints:
+        #     # only need to consider shadow constraints where the target flight is assigned to the target gate
+        #     is_relevant = False
+        #     if (f1, g1) == (target_flight, target_gate):
+        #         other_flight, other_gate = f2, g2
+        #         is_relevant = True
+        #     elif (f2, g2) == (target_flight, target_gate):
+        #         other_flight, other_gate = f1, g1
+        #         is_relevant = True
+        #     if is_relevant:
+        #         # check if other_flight is assigned to other_gate. If this is the case: constraint violated -> return False
+        #         for activity in flights_to_activities[other_flight]:
+        #             if nodes_to_clusters[activity] == nodes_to_clusters[other_gate]:
+        #                 return False
 
 
     # if vertex is not a flight vertex: need to check for all possible shadow restrictions involving gate 'vertex'
     else:
         relevant_constraints = []
-        for (f1, g1, f2, g2) in shadow_constraints:
-            # only need to consider shadow constraints where the target flight is assigned to the target gate
-            is_relevant = False
-            if g1 == vertex:
-                own_flight = f1
-                other_flight, other_gate = f2, g2
-                is_relevant = True
-            elif g2 == vertex:
-                own_flight = f2
-                other_flight, other_gate = f1, g1
-                is_relevant = True
-            if is_relevant:
-                # check if other_flight is assigned to other_gate and own_flight is assigned to vertex. If True -> constraint is violated
-                for other_activity in flights_to_activities[other_flight]:
-                    for own_activity in flights_to_activities[own_flight]:
-                        if nodes_to_clusters[other_activity] == nodes_to_clusters[other_gate] and nodes_to_clusters[own_activity] == nodes_to_clusters[vertex]:
-                            return False
+
+
+        for (f1, f2, g2) in sc_per_gate[vertex]:
+            own_flight = f1
+            other_flight = f2
+            other_gate = g2
+            for other_activity in flights_to_activities[other_flight]:
+                for own_activity in flights_to_activities[own_flight]:
+                    if nodes_to_clusters[other_activity] == nodes_to_clusters[other_gate] and nodes_to_clusters[
+                        own_activity] == nodes_to_clusters[vertex]:
+                        return False
+
+        # for (f1, g1, f2, g2) in shadow_constraints:
+        #     # only need to consider shadow constraints where the target flight is assigned to the target gate
+        #     is_relevant = False
+        #     if g1 == vertex:
+        #         own_flight = f1
+        #         other_flight, other_gate = f2, g2
+        #         is_relevant = True
+        #     elif g2 == vertex:
+        #         own_flight = f2
+        #         other_flight, other_gate = f1, g1
+        #         is_relevant = True
+        #     if is_relevant:
+        #         # check if other_flight is assigned to other_gate and own_flight is assigned to vertex. If True -> constraint is violated
+        #         for other_activity in flights_to_activities[other_flight]:
+        #             for own_activity in flights_to_activities[own_flight]:
+        #                 if nodes_to_clusters[other_activity] == nodes_to_clusters[other_gate] and nodes_to_clusters[own_activity] == nodes_to_clusters[vertex]:
+        #                     return False
 
 
 
@@ -356,7 +401,7 @@ def initialize_clusters(weights, activities_to_flights, gates_to_indices, U_succ
     return clusters, nodes_to_clusters
 
 def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gates, weights, shadow_constraints, flights_to_activities,
-                         activities_to_flights, gates_to_indices, large_negative):
+                         activities_to_flights, gates_to_indices, large_negative, sc_per_flight_gate_pair, sc_per_gate):
     """
     (Algorithm 1)
     Refines initial gate assignments for flights using a tabu search heuristic. The function iteratively
@@ -381,8 +426,8 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
     # Initialization
     current_score, score_excl_penalties, no_unassigned_activities = calculate_total_score(current_solution, weights, large_negative)
     values_per_iterator = {0: current_score}  # keys = iterators r of the algorithm, values = obj. value of solution at r-th iteration
-    solutions_per_iterator = {0: copy.deepcopy(current_solution)}       # keys = iterators r of the algorithm, values = solution after performing r-th iteration
-    nodes_to_clusters_per_iterator = {0: copy.deepcopy(nodes_to_clusters)}
+    # solutions_per_iterator = {0: copy.deepcopy(current_solution)}       # keys = iterators r of the algorithm, values = solution after performing r-th iteration
+
 
     nontabu_vertices = list(activities_to_flights.keys()) + list(gates_to_indices.keys())
     can_improve_more = True
@@ -405,12 +450,15 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
                 gates_per_cluster[cluster_id].append(vertex)
         cluster_contains_gate[cluster_id] = contains_gate
 
+    solution_data_per_iterator = {0: (copy.deepcopy(current_solution), copy.deepcopy(nodes_to_clusters),
+                                      copy.deepcopy(cluster_contains_gate), copy.deepcopy(gates_per_cluster))}
+
 
     solution_iterator = 0       # index of the currently found solution (0=initial solution)
-    maximum_move_count = 100
+    maximum_move_count = 50000      # large number that should never be reached
     while can_improve_more:
-        current_solution = solutions_per_iterator[solution_iterator]     # get current solution
-        nodes_to_clusters = nodes_to_clusters_per_iterator[solution_iterator]
+        current_solution, nodes_to_clusters, cluster_contains_gate, gates_per_cluster = solution_data_per_iterator[solution_iterator]
+
         current_no_tabu_vertices = len(nontabu_vertices)        # used to check if any improving moves have been found in the current iteration
 
         # for each vertex: find the best move that leads to a feasible neighbour
@@ -434,7 +482,7 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
                     # 1. check for shadow restrictions (if vertex is not a gate vertex)
                     move_allowed = is_move_feasible_new(vertex, current_solution, current_solution[current_cluster_id], current_solution[target_cluster_id],
                                                         shadow_constraints, flights_to_activities, activities_to_flights,
-                                                        nodes_to_clusters)
+                                                        nodes_to_clusters, sc_per_flight_gate_pair, sc_per_gate)
                     # 2. if target cluster is empty: current cluster needs to contain at least 2 elements
                     if len(current_solution[target_cluster_id]) == 0 and len(current_solution[current_cluster_id]) == 1:
                         move_allowed = False
@@ -452,21 +500,24 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
                 target_solution[best_target_cluster_id].append(vertex)
                 target_nodes_to_clusters = copy.deepcopy(nodes_to_clusters)
                 target_nodes_to_clusters[vertex] = best_target_cluster_id
+                target_cluster_contains_gate = copy.deepcopy(cluster_contains_gate)
+                target_gates_per_cluster = copy.deepcopy(gates_per_cluster)
+
+
                 # mark vertex as tabu
                 nontabu_vertices.remove(vertex)
                 # save solution value and solution itself
                 solution_iterator += 1
                 values_per_iterator[solution_iterator] = values_per_iterator[solution_iterator - 1] + best_improvement
-                solutions_per_iterator[solution_iterator] = target_solution
-                nodes_to_clusters_per_iterator[solution_iterator] = target_nodes_to_clusters
                 # print(f"Found an improving move. Moving vertex {vertex} from {current_cluster_id} to {best_target_cluster_id}."
                 #       f"Improvement: {best_improvement}. Current solution iterator: {solution_iterator}, value: {values_per_iterator[solution_iterator]}")
                 # if vertex that has been moved is a gate vertex: remember that target cluster now has a gate!
                 if vertex_is_gate[vertex]:
-                    cluster_contains_gate[best_target_cluster_id] = True
-                    cluster_contains_gate[current_cluster_id] = False
-                    gates_per_cluster[best_target_cluster_id].append(vertex)
-                    gates_per_cluster[current_cluster_id].remove(vertex)
+                    target_cluster_contains_gate[best_target_cluster_id] = True
+                    target_cluster_contains_gate[current_cluster_id] = False
+                    target_gates_per_cluster[best_target_cluster_id].append(vertex)
+                    target_gates_per_cluster[current_cluster_id].remove(vertex)
+                solution_data_per_iterator[solution_iterator] = (target_solution, target_nodes_to_clusters, target_cluster_contains_gate, target_gates_per_cluster)
 
             # todo remove
             if solution_iterator > maximum_move_count:
@@ -482,11 +533,10 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
     # get iteration where objective value has been maximal
     values_sorted = dict(sorted(values_per_iterator.items(), key = lambda x: x[1], reverse=True))
     best_iterator = list(values_sorted.keys())[0]
-    best_solution = solutions_per_iterator[best_iterator]
-    best_nodes_to_clusters = nodes_to_clusters_per_iterator[best_iterator]
+    best_solution, best_nodes_to_clusters, best_cluster_contains_gate, best_gates_per_cluster = solution_data_per_iterator[best_iterator]
     print(f"Best solution found at iteration {best_iterator}, value: {values_sorted[best_iterator]}")
 
-    return best_solution, best_nodes_to_clusters, cluster_contains_gate, gates_per_cluster
+    return best_solution, best_nodes_to_clusters, best_cluster_contains_gate, best_gates_per_cluster
 
 
 
@@ -529,7 +579,7 @@ def apply_two_opt_step(solution, weights, C):
 def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
                                            shadow_constraints, num_flights,
                                            activities_to_flights, gates_to_indices, flights_to_activities,
-                                           large_negative):
+                                           large_negative, sc_per_flight_gate_pair, sc_per_gate):
     """
     (Algorithm 3)
     Optimizes flight gate assignments by iteratively refining an initial solution through a heuristic approach.
@@ -555,7 +605,7 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
     while run_count < 7:
         print(f"Starting iteration. Value of current solution: {calculate_total_score(current_solution, weights, large_negative)[0]}")
         refined_solution, nodes_to_clusters, cluster_contains_gate, gates_per_cluster = refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gates, weights, shadow_constraints, flights_to_activities,
-                    activities_to_flights, gates_to_indices, large_negative)
+                    activities_to_flights, gates_to_indices, large_negative, sc_per_flight_gate_pair, sc_per_gate)
         current_score, score_excl_penalties, no_unassigned_activities = calculate_total_score(refined_solution, weights, large_negative)
         print(f"Algorithm 2 terminated. Value of solution: {current_score}. Re-assigning and eliminating conflicts now...")
 

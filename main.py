@@ -46,11 +46,15 @@ def main(local_path, EstimatedOrReal):
     # todo: adjust it so it works without 'vertices' list
 
     # Iterative Refinement Heuristic Model
+    sc_per_flight_gate_pair, sc_per_gate = Heuristic.convert_sc_to_dicts(shadow_constraints)
+
+
     start_time = time.time()
     print("Starting standard heuristic.")
     iterative_refinement_solution = Heuristic.iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
                                            shadow_constraints, num_flights,
-                                           activities_to_flights, gates_to_indices, flights_to_activities, large_negative)
+                                           activities_to_flights, gates_to_indices, flights_to_activities, large_negative,
+                                                                                     sc_per_flight_gate_pair, sc_per_gate)
     iterative_refinement_duration = time.time() - start_time
     performance_records['Iterative Refinement Heuristic'] = {'duration': iterative_refinement_duration,
                                                              'solution': iterative_refinement_solution}
