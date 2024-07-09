@@ -24,7 +24,7 @@ def main(local_path, EstimatedOrReal):
 
     large_negative = vw.calculate_large_negative(activities_to_flights, num_activities, no_towable_flights, T_timeDiff, P_preferences, M_validGate, alpha1, alpha2, alpha3, t_max)
     # large_negative = -20000
-    weights = vw.get_weight_matrix3(num_activities, activities_to_flights, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3,
+    weights = vw.get_weight_matrix(num_activities, activities_to_flights, T_timeDiff, P_preferences, U_successor, M_validGate, alpha1, alpha2, alpha3,
                       t_max, large_negative, gates_to_indices, indices_to_gates)
 
     # Note: the keys of the dictionary 'weights' are exactly the names of all vertices present in the graph!
@@ -46,19 +46,20 @@ def main(local_path, EstimatedOrReal):
     # todo: adjust it so it works without 'vertices' list
 
     # Iterative Refinement Heuristic Model
-    sc_per_flight_gate_pair, sc_per_gate = Heuristic.convert_sc_to_dicts(shadow_constraints)
-
+    sc_per_act_gate_pair, sc_per_gate = Instance.convert_sc_to_dicts(shadow_constraints)
 
     start_time = time.time()
-    print("Starting standard heuristic.")
-    iterative_refinement_solution = Heuristic.iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
-                                           shadow_constraints, num_flights,
-                                           activities_to_flights, gates_to_indices, flights_to_activities, large_negative,
-                                                                                     sc_per_flight_gate_pair, sc_per_gate)
+    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting standard heuristic.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    iterative_refinement_solution, iterative_refinement_score = (
+        Heuristic.iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                                                         shadow_constraints, num_flights,
+                                                         activities_to_flights, gates_to_indices, flights_to_activities,
+                                                         large_negative,
+                                                         sc_per_act_gate_pair, sc_per_gate))
     iterative_refinement_duration = time.time() - start_time
     performance_records['Iterative Refinement Heuristic'] = {'duration': iterative_refinement_duration,
                                                              'solution': iterative_refinement_solution}
-    print(f"Done. runtime: {time.time() - start_time}")
+    print(f"Done. Runtime = {time.time() - start_time} seconds.")
 
     # # 2-opt Integrated Heuristic Model
     # start_time = time.time()
@@ -80,6 +81,7 @@ def main(local_path, EstimatedOrReal):
 # Configurations for data import
 LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management/Brussels.xlsm'
 LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
+LOCAL_PATH_Arthur_light = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels (less flights).xlsm'
 LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels.xlsm'
 LOCAL_PATH = LOCAL_PATH_Andreas
 
@@ -89,6 +91,5 @@ if __name__ == "__main__":
     main(LOCAL_PATH, EstimatedOrReal)
 
 
-print("YYYYYYYYYYYYYEEEEEEEEEEEEEESSSSSSSSSSSSS")
-print("THE HEURISTIC WOOOOORKS, IT IS DOOOOOOOOOONE")
-print("oh wait, the results are horrible. maybe it's not done yet...")
+
+

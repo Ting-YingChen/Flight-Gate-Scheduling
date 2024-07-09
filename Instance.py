@@ -1,7 +1,6 @@
 import pandas as pd
 import datetime
 
-# Data Import Functions
 def import_data(local_path, EstimatedOrReal):
     # Flights
     flights = pd.read_excel(local_path, sheet_name='EBBR - Flights', usecols='A:AV', header=1, index_col=0)
@@ -12,28 +11,27 @@ def import_data(local_path, EstimatedOrReal):
     num_gates = len(gates)
 
     # T Matrix (Time Differences)
+    # Regular instance
     T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:PK', header=0, index_col=0)
     T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:OD', header=0, index_col=0)
     if EstimatedOrReal == "Estimated":
         T_timeDiff = T_timeDiff_Estim
-        num_activities = len(T_timeDiff_Estim)
     elif EstimatedOrReal == "Real":
         T_timeDiff = T_timeDiff_Real
-        num_activities = len(T_timeDiff_Real)
+
+    # # Smaller instance (1/3rd of the flights)
+    # T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:EP', header=0, index_col=0)
+    # T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:ED', header=0, index_col=0)
+    # if EstimatedOrReal == "Estimated":
+    #     T_timeDiff = T_timeDiff_Estim
+    # elif EstimatedOrReal == "Real":
+    #     T_timeDiff = T_timeDiff_Real
 
     # Gates Neighbours and Distances
     Gates_N = pd.read_excel(local_path, sheet_name='EBBR - Gates (next)', usecols='A:DA', header=0, index_col=0, nrows=num_gates)
 
     return flights, num_flights, gates, num_gates, T_timeDiff, Gates_N
 
-# # Import data
-# EstimatedOrReal = "Estimated"
-# EstimatedOrReal = "Real"
-# flightsBrussels, gatesBrussels, T_timeDiff, Gates_N, Gates_D, num_flights, num_gates = import_data(LOCAL_PATH, EstimatedOrReal)
-
-
-
-# Processing functions for flight and gate data
 def process_data(flights, gates):
     # Flight data
     Flight_No = flights.index.tolist()          # Given indices
@@ -52,27 +50,21 @@ def process_data(flights, gates):
 
     return Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close
 
-# # Process data
-# Flight_No, Gate_No, ETA, ETD = process_data(flightsBrussels, gatesBrussels)
-
-
-
-# Preferences setup
 def build_preferences_dict(flights, Is_Int, Is_LowCost, Is_Close, Flight_No, M_validGate):
     """ Builds a dictionary of flight preferences. """
     P_preferences = {}  # keys: flights, values: dictionary with keys = gate IDs, values = assigned preference
     for flight in Flight_No:
         P_preferences[flight] = {}
         for gate in M_validGate[flight]:
-            F_pref = 0
+            g_pref = 0
             if gate == "Dum":
-                F_pref -= 1000     # For dummy gate, set preference to some large <0 value
+                g_pref -= 1000     # For dummy gate, set preference to some large <0 value
             else:
                 prefForInt = flights.loc[flight, "Pref. Int"]
                 BothAreInt = prefForInt == 10 and Is_Int[gate] == (1 or 2)  # If flight is INT and gate is INT or remote
                 BothAreEU = prefForInt == 0 and Is_Int[gate] == (0 or 2)    # If flight is EU and gate is EU or remote
                 if BothAreInt or BothAreEU:
-                    # F_pref += 10     # This is not a preference, it's a constraint -> already included in M_validGate
+                    g_pref += 10     # Already included in M_validGate, but the preference still increases
                     pass
                 if BothAreEU:
                     prefForNormal = flights.loc[flight, "Pref. EU (normal)"]
@@ -82,92 +74,27 @@ def build_preferences_dict(flights, Is_Int, Is_LowCost, Is_Close, Flight_No, M_v
                     BothLowCost = prefForLowCost == 10 and Is_LowCost[gate] == 1
                     GateIsClose = Is_Close[gate] == 1
                     if BothNormal:
-                        F_pref += prefForNormal
+                        g_pref += prefForNormal
                     elif BothLowCost:
-                        F_pref += prefForLowCost
+                        g_pref += prefForLowCost
                     elif GateIsClose:
                         if prefForClose == 0:
-                            F_pref -= 10    # -10 pts of preference if flight doesn't want a close gate
+                            g_pref -= 10    # -10 pts of preference if flight doesn't want a close gate
                         elif prefForClose == 5:
-                            F_pref -= 0     # 0 pts of preference if flight is indifferent to a close gate
+                            g_pref -= 0     # 0 pts of preference if flight is indifferent to a close gate
                         elif prefForClose == 10:
-                            F_pref += 10    # +10 pts of preference if flight does want a close gate
+                            g_pref += 10    # +10 pts of preference if flight does want a close gate
                     elif not GateIsClose:
                         if prefForClose == 0:
-                            F_pref += 10    # +10 pts of preference if flight doesn't want a close gate
+                            g_pref += 10    # +10 pts of preference if flight doesn't want a close gate
                         elif prefForClose == 5:
-                            F_pref -= 0     # 0 pts of preference if flight is indifferent to a close gate
+                            g_pref -= 0     # 0 pts of preference if flight is indifferent to a close gate
                         elif prefForClose == 10:
-                            F_pref -= 10    # -10 pts of preference if flight does want a close gate
+                            g_pref -= 10    # -10 pts of preference if flight does want a close gate
 
-            P_preferences[flight][gate] = F_pref
+            P_preferences[flight][gate] = g_pref
 
     return P_preferences
-
-# # Build preferences
-# P_preferences = build_preferences_dict(flightsBrussels)
-
-
-
-# Creation of activities for each flight
-def createActivitiesFromFlights_Python(Flight_No, flights):
-    '''map flights to activities (arrivals, departures, parking [if possible]).
-    also creates a successor dictionary udict.
-    '''
-    flights_to_activities = {} # keys: flight no., values: list of all activities associated with respective flight
-    activities_to_flights = {} # inverse dictionary of flights_to_activities
-    Udict = {}
-    no_towable_flights = 0  # counts the number of flights that can theoretically be towed
-
-    for flight in Flight_No:
-        # arrival = flights.loc[flight, "ETA"]
-        # departure = flights.loc[flight, "ETD"]
-        arrival = flights.loc[flight, "RTA"]
-        departure = flights.loc[flight, "RTD"]
-        TotDelay = flights.loc[flight, "Total Delay"]
-        is_turnaround = None
-
-        # Decide whether flight is towable or not
-        dep_datetime = datetime.datetime.combine(datetime.datetime(2000, 1, 1), departure)
-        arr_datetime = datetime.datetime.combine(datetime.datetime(2000, 1, 1), arrival)
-        #TotDelay_datetime = datetime.datetime.combine(datetime.datetime(2000, 1, 1), TotDelay) # Doesn't work because string?
-        layover_seconds = dep_datetime - arr_datetime
-
-        # Conditions for flight to be towable:
-        C1 = layover_seconds > datetime.timedelta(seconds=3600)                     # Layover > 60min
-        hours, minutes = map(int, flights.loc[flight, "Total Delay"].split(":"))
-        NewTotDelay = (hours * 60 + minutes) * 60
-        C2 = NewTotDelay > 1200  # Delay < 20min (avoid delaying the flight even more)
-        #C2 = TotDelay_datetime > datetime.timedelta(seconds=1200)  # Delay < 20min (avoid delaying the flight even more)
-
-        # todo: add more conditions?
-        ''' How to have a conditions:
-            - Towable if suggested gate (to be towed to) is not remote (int = 2) or dummy (needed?)?
-            - Towable if suggested gate (to be towed to) has a higher preference by this flight?
-            - Towable if -current gate assigned to-'s utilisation ratio >75%? (maybe to maximise gate utilisation and minimise personnel?)
-        '''
-        is_towable = C1 and C2
-
-        # map flights to activities
-        flights_to_activities[flight] = [f"arrival_{flight}", f"departure_{flight}"]
-        Udict[f"departure_{flight}"] = 0    # departures activity has no successor
-        if is_towable:
-            no_towable_flights += 1
-            flights_to_activities[flight].append(f"parking_{flight}")
-            Udict[f"arrival_{flight}"] = f"parking_{flight}"
-            Udict[f"parking_{flight}"] = f"departure_{flight}"
-        else:
-            Udict[f"arrival_{flight}"] = f"departure_{flight}"
-
-        # map activities to flights
-        activities_to_flights[f"arrival_{flight}"] = flight
-        activities_to_flights[f"departure_{flight}"] = flight
-        if is_towable:
-            activities_to_flights[f"parking_{flight}"] = flight
-
-    num_activities = len(activities_to_flights)
-
-    return flights_to_activities, activities_to_flights, Udict, no_towable_flights, num_activities
 
 def createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal):
     '''map flights to activities (arrivals, departures, parking [if possible]).
@@ -179,12 +106,12 @@ def createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal):
     no_towable_flights = 0  # counts the number of flights that can theoretically be towed
 
     if EstimatedOrReal == "Estimated":
-        ColumnCheckTurnaround = 35
+        ColumnCheckTurnaround = 37-1-1      # Column AK is the 37th column, -1 because column 1 = indices, -1 because .iloc start from 0
     elif EstimatedOrReal == "Real":
-        ColumnCheckTurnaround = 46
+        ColumnCheckTurnaround = 48-1-1      # Column AV is the 48th column, -1 because column 1 = indices, -1 because .iloc start from 0
 
     myActivities = T_timeDiff.columns.tolist()  # Get all activities
-    myFlightsList = sorted(set([int(e[4:]) for e in myActivities])) # activities from the excel start with arr_, dep_ or par_ -> remove the 1st four characters'
+    myFlightsList = flights.index.tolist()
 
     for flight in myFlightsList:
         FlightIsTurnAround = flights.iloc[flight-1, ColumnCheckTurnaround]
@@ -211,36 +138,15 @@ def createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal):
 
     return flights_to_activities, activities_to_flights, Udict, no_towable_flights, num_activities
 
-
-# # Create flight activities
-#flights_to_activities, activities_to_flights, U_successor = createActivitiesFromFlights_Python(Flight_No, flights)
-#EstimatedOrReal = "Estimated"
-#EstimatedOrReal = "Real"
-#flights_to_activities, activities_to_flights, U_successor = createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal)
-
-
-
-# # Successor function and gate assignments
-# def build_Udict(Flight_No):
-#     """ Builds a successor function dictionary. """
-#     return {flight: [3 * flight -2, 3 * flight, 0] for flight in Flight_No}
-
 def build_Mdict(AC_size, Pref_Int, Max_Wingspan, Is_Int, Flight_No, Gate_No):
     Mdict = {}
     for flight in Flight_No:
         valid_gates = [gate for gate in Gate_No if AC_size.loc[flight] <= Max_Wingspan.loc[gate] and (Pref_Int[flight] / 10 == Is_Int.loc[gate] or Is_Int.loc[gate] == 2)]
-        Mdict[flight] = valid_gates + ['Dum']  # Include dummy gate
-
+        # Mdict[flight] = valid_gates + ['Dum']  # Include dummy gate
+        Mdict[flight] = valid_gates
     return Mdict
 
-# # Setup M dictionary
-# U_successor = build_Udict(Flight_No)
-# M_validGate = build_Mdict(flightsBrussels['AC size (m)'], gatesBrussels['Max length (m)'], P_preferences, gatesBrussels['International'])
-
-
-
-# Shadow constraints based on operational needs
-def build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N):
+def build_ShadowConstraints(activities_to_flights, T_timeDiff, M_validGate, Gates_N):
     """ Constructs shadow constraints based on flight scheduling logic. """
     # preprocessing: store information on neighbouring or identical gates. Reduces runtime by >90%
     GatesAreNext = {}
@@ -251,25 +157,41 @@ def build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N):
             GatesAreSame[(gate_f1, gate_f2)] = Gates_N.loc[gate_f1, gate_f2] == -1  # Check if they are the same gates
 
     shadow_constraints = []
-    for flight1 in Flight_No:
-        for flight2 in Flight_No:
-            if ETA.loc[flight2] < ETD.loc[flight1] and flight2 > flight1:  # Check if flight2 lands before flight1 departs
-                for gate1 in M_validGate[flight1]:
-                    for gate2 in M_validGate[flight2]:
-                        if (GatesAreNext[(gate1, gate2)] or GatesAreSame[(gate1, gate2)]) and gate1 != 'Dum' and gate2 != 'Dum':
-                            shadow_constraints.append((flight1, gate1, flight2, gate2))
+    for act1 in activities_to_flights.keys():
+        for act2 in activities_to_flights.keys():
+            if T_timeDiff.loc[act1, act2] < 0:      # Check if activities overlaps
+                f1 = activities_to_flights[act1]    # Flight of act1
+                f2 = activities_to_flights[act2]    # Flight of act2
+                for gate1 in M_validGate[f1]:
+                    for gate2 in M_validGate[f2]:
+                        if (GatesAreNext[(gate1, gate2)] or GatesAreSame[(gate1, gate2)]) and (gate1 != 'Dum' and gate2 != 'Dum'):
+                            shadow_constraints.append((act1, gate1, act2, gate2))
     return shadow_constraints
 
-# # Build shadow constraints
-# shadow_constraints = build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N)
+def convert_sc_to_dicts(shadow_constraints):
+    '''Convert shadow constraint list into easier-to-access dictionaries.
+    '''
+    sc_per_act_gate_pair = {}   # { ('act1', 'gate1'): [ ('actX', 'gateY'), ('actZ', 'gateA'), ...], ('act2', 'gate2'): [...], ... }
+    sc_per_gate = {}            # { 'gate1': [('act1', 'act2', 'gate1'), (...), ...], 'gate2': [...], ... }
 
+    for (a1, g1, a2, g2) in shadow_constraints:
+        # dictionary with keys = tuples of flight and gate
+        if (a1, g1) not in sc_per_act_gate_pair:
+            sc_per_act_gate_pair[(a1, g1)] = []
+        sc_per_act_gate_pair[(a1, g1)].append((a2, g2))
+        if (a2, g2) not in sc_per_act_gate_pair:
+            sc_per_act_gate_pair[(a2, g2)] = []
+        sc_per_act_gate_pair[(a2, g2)].append((a1, g1))
 
+        # dictionary with keys = gates
+        if g1 not in sc_per_gate:
+            sc_per_gate[g1] = []
+        sc_per_gate[g1].append((a1, a2, g2))
+        if g2 not in sc_per_gate:
+            sc_per_gate[g2] = []
+        sc_per_gate[g2].append((a2, a1, g1))
 
-# # Parameters based on experiences
-# alpha1 = 1  # Preference scaling factor
-# alpha2 = 20  # Reward for avoiding tows
-# alpha3 = 100  # Penalty scaling factor for buffer time deficits
-# t_max = 30
+    return sc_per_act_gate_pair, sc_per_gate
 
 def mapGatesToIndices(Gates_N):
     '''Assign a unique index, starting from 1, to each gate. Used to create the weight matrix for the CPP.
@@ -286,30 +208,13 @@ def mapGatesToIndices(Gates_N):
 
     return gates_to_indices, indices_to_gates
 
-# Function that reads input data and generates all relevant data structures
 def createInputData(local_path, check_output, EstimatedOrReal):
-    # Create all needed data structured required as input for the MIP or the heuristic.
     flights, num_flights, gates, num_gates, T_timeDiff, Gates_N = import_data(local_path, EstimatedOrReal)
-
-    # Process data
     Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close = process_data(flights, gates)
-
-    # Create activities and generate successor function
-    #flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities = createActivitiesFromFlights_Python(Flight_No, flights)
     flights_to_activities, activities_to_flights, U_successor, no_towable_flights, num_activities = createActivitiesFromFlights_VBA(T_timeDiff, flights, EstimatedOrReal)
-
-    # Create feasible gate dictionary M
-    M_validGate = build_Mdict(flights['AC size (m)'], flights["Pref. Int"], gates['Max length (m)'],
-        gates['International'], Flight_No, Gate_No)
-
-    # Build preferences
-    P_preferences = build_preferences_dict(flights, gates['International'], gates['Low cost'],
-        gates["Close"], Flight_No, M_validGate)
-
-    # Build shadow constraints
-    shadow_constraints = build_ShadowConstraints(Flight_No, ETA, ETD, M_validGate, Gates_N)
-
-    # map gate IDs to indices
+    M_validGate = build_Mdict(flights['AC size (m)'], flights["Pref. Int"], gates['Max length (m)'], gates['International'], Flight_No, Gate_No)
+    P_preferences = build_preferences_dict(flights, gates['International'], gates['Low cost'], gates["Close"], Flight_No, M_validGate)
+    shadow_constraints = build_ShadowConstraints(activities_to_flights, T_timeDiff, M_validGate, Gates_N)
     gates_to_indices, indices_to_gates = mapGatesToIndices(Gates_N)
 
     # if desired: print some sample data from the results
@@ -363,7 +268,6 @@ def createInputData(local_path, check_output, EstimatedOrReal):
             M_validGate,
             shadow_constraints,
             gates_to_indices, indices_to_gates)
-
 
 
 if __name__ == "__main__":
