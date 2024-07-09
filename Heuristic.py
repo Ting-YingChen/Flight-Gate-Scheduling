@@ -383,6 +383,12 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
 
     return best_solution, best_nodes_to_clusters, best_cluster_contains_gate, best_cluster_to_gates
 
+
+def get_related_activities(vertex, activities_to_flights, current_solution):
+    # Placeholder function: implement based on current data structure
+    flight = activities_to_flights[vertex]
+    return [v for v, f in activities_to_flights.items() if f == flight and v != vertex]
+
 def apply_two_opt_step(current_solution, nodes_to_clusters, weights, large_negative, activities_to_flights, M_validGate):
     """Applies a 2-opt algorithm to ..."""
 
@@ -408,22 +414,36 @@ def apply_two_opt_step(current_solution, nodes_to_clusters, weights, large_negat
         cluster_contains_gate[cluster_id] = contains_gate
 
     # Attempt swaps between all pairs of vertices not in the same cluster
+    activity_vertices = [vertex for vertex in vertex_is_gate if
+                         vertex_is_gate[vertex] == False]  # Filter only activity vertices
+
     # todo: only check swap quality if both vertices corresponding to activities for which not all 3 activities are already at the same gate
-    activity_vertices = [vertex for vertex in vertex_is_gate if vertex_is_gate[vertex] == False]
+    # Function to check if all related activities are at the same gate
+    def all_activities_same_gate(vertex, current_solution, nodes_to_clusters):
+        related_activities = get_related_activities(vertex, activities_to_flights, current_solution)
+        gate_set = {nodes_to_clusters[act] for act in related_activities if act in nodes_to_clusters}
+        return len(gate_set) == 1
+
     for i in range(len(activity_vertices)):
         vertex_a = activity_vertices[i]
         flight_a = activities_to_flights[vertex_a]
         cluster_a_id = nodes_to_clusters[vertex_a]
-        for j in range(i, len(activity_vertices)):
+
+        for j in range(i, len(activity_vertices)):  # ensure each pair is only checked once
             vertex_b = activity_vertices[j]
             flight_b = activities_to_flights[vertex_b]
             cluster_b_id = nodes_to_clusters[vertex_b]
+
             if cluster_a_id == cluster_b_id:
                 continue
+
             # skip if 2-opt step would assign activities to infeasible gates, as this can not be an improving step
             if gate_per_cluster[cluster_b_id] not in M_validGate[flight_a] or gate_per_cluster[cluster_a_id] not in M_validGate[flight_b]:
                 continue
 
+            # Only attempt swaps if not all related activities are already at the same gate
+            if all_activities_same_gate(vertex_a, current_solution, nodes_to_clusters) and all_activities_same_gate(vertex_b, current_solution, nodes_to_clusters):
+                continue
             # Perform the swap
             current_solution[cluster_a_id].remove(vertex_a)
             current_solution[cluster_b_id].remove(vertex_b)
@@ -455,50 +475,6 @@ def apply_two_opt_step(current_solution, nodes_to_clusters, weights, large_negat
                 # Revert the mapping after swap back
                 nodes_to_clusters[vertex_a] = cluster_a_id
                 nodes_to_clusters[vertex_b] = cluster_b_id
-
-    # for cluster_a_id in current_solution:
-    #     print(f"{cluster_a_id} ({current_solution[cluster_a_id]} out of {len(current_solution)}")
-    #     for vertex_a in current_solution[cluster_a_id]:
-    #         for cluster_b_id in current_solution:
-    #             if cluster_a_id == cluster_b_id:
-    #                 continue  # Skip if clusters are the same
-    #
-    #             for vertex_b in current_solution[cluster_b_id]:
-    #                 if vertex_a != vertex_b and nodes_to_clusters[vertex_a] != nodes_to_clusters[vertex_b]:
-    #                     # Ensure that the swap is only attempted between vertices of the same type
-    #                     if vertex_is_gate[vertex_a] != vertex_is_gate[vertex_b]:
-    #                         continue  # Skip swaps between different types (gates and activities)
-    #
-    #                     # Perform the swap
-    #                     current_solution[cluster_a_id].remove(vertex_a)
-    #                     current_solution[cluster_b_id].remove(vertex_b)
-    #                     current_solution[cluster_a_id].append(vertex_b)
-    #                     current_solution[cluster_b_id].append(vertex_a)
-    #
-    #                     # Update the mapping after swap
-    #                     nodes_to_clusters[vertex_a] = cluster_b_id
-    #                     nodes_to_clusters[vertex_b] = cluster_a_id
-    #
-    #                     # Recalculate the score after the swap
-    #                     new_score, _, _ = calculate_total_score(current_solution, weights, large_negative)
-    #
-    #                     # If the new score is better, accept the swap
-    #                     if new_score > best_score:
-    #                         print(f"Improvement found!")
-    #                         best_score = new_score
-    #                         best_solution = copy.deepcopy(current_solution)
-    #                         best_nodes_to_clusters = copy.deepcopy(nodes_to_clusters)
-    #                         improved = True
-    #                     else:
-    #                         # Swap back if no improvement
-    #                         current_solution[cluster_a_id].remove(vertex_b)
-    #                         current_solution[cluster_b_id].remove(vertex_a)
-    #                         current_solution[cluster_a_id].append(vertex_a)
-    #                         current_solution[cluster_b_id].append(vertex_b)
-    #
-    #                         # Revert the mapping after swap back
-    #                         nodes_to_clusters[vertex_a] = cluster_a_id
-    #                         nodes_to_clusters[vertex_b] = cluster_b_id
 
     return improved, best_solution, best_nodes_to_clusters
 
