@@ -566,42 +566,6 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
 
     return best_solution, best_score
 
-def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
-                                           shadow_constraints, num_flights,
-                                           activities_to_flights, gates_to_indices, flights_to_activities,
-                                           large_negative, sc_per_act_gate_pair, sc_per_gate):
-    # Algorithm 3 + 2-opt
-    current_solution = initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor)
-    best_solution = refine_clusters(current_solution, num_activities, num_gates, weights, shadow_constraints, flights_to_activities,
-                        activities_to_flights, gates_to_indices)
-    best_score, score_excl_penalties, no_unassigned_activities = calculate_total_score(best_solution, weights, large_negative)
-
-    limited_run_count = 0
-    run_count = 1
-    while limited_run_count < 7:
-        print(f"\n================================ Run n°{run_count} ================================\n"
-              f"Starting new run. Value of current solution: {readable_score(best_score)}")
-
-        # Algorithm 1
-        # Apply a 2-opt step to refine the solution further by examining pairs of activities
-        two_opt_refined_solution = apply_two_opt_step(current_solution, weights, U_successor)
-        refined_solution = refine_clusters(two_opt_refined_solution, num_activities, num_gates, weights, shadow_constraints, flights_to_activities,
-                        activities_to_flights, gates_to_indices)
-        current_score, score_excl_penalties, no_unassigned_activities = calculate_total_score(refined_solution, weights, large_negative)
-
-        if current_score > best_score:
-            best_solution = refined_solution[:]
-            best_score = current_score
-            limited_run_count = 0  # Reset if an improvement is found
-        else:
-            limited_run_count += 1  # Continue if no improvement
-
-        # Reassign any non-optimal gate assignments and handle conflicts
-        reassign_vertices(refined_solution, weights, M_validGate, P_preferences)
-        eliminate_conflicts(refined_solution, M_validGate, U_successor)
-
-    return best_solution
-
 def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
                                            shadow_constraints, num_flights,
                                            activities_to_flights, gates_to_indices, flights_to_activities,
@@ -676,6 +640,42 @@ def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_succ
               f"   Improvement/deterioration from the start by {readable_score(best_score-best_score0)} ({str((best_score-best_score0)*100/abs(best_score0))[0:7]}%)")
 
     return best_solution, best_score
+
+def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                                           shadow_constraints, num_flights,
+                                           activities_to_flights, gates_to_indices, flights_to_activities,
+                                           large_negative, sc_per_act_gate_pair, sc_per_gate):
+    # Algorithm 3 + 2-opt
+    current_solution = initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor)
+    best_solution = refine_clusters(current_solution, num_activities, num_gates, weights, shadow_constraints, flights_to_activities,
+                        activities_to_flights, gates_to_indices)
+    best_score, score_excl_penalties, no_unassigned_activities = calculate_total_score(best_solution, weights, large_negative)
+
+    limited_run_count = 0
+    run_count = 1
+    while limited_run_count < 7:
+        print(f"\n================================ Run n°{run_count} ================================\n"
+              f"Starting new run. Value of current solution: {readable_score(best_score)}")
+
+        # Algorithm 1
+        # Apply a 2-opt step to refine the solution further by examining pairs of activities
+        two_opt_refined_solution = apply_two_opt_step(current_solution, weights, U_successor)
+        refined_solution = refine_clusters(two_opt_refined_solution, num_activities, num_gates, weights, shadow_constraints, flights_to_activities,
+                        activities_to_flights, gates_to_indices)
+        current_score, score_excl_penalties, no_unassigned_activities = calculate_total_score(refined_solution, weights, large_negative)
+
+        if current_score > best_score:
+            best_solution = refined_solution[:]
+            best_score = current_score
+            limited_run_count = 0  # Reset if an improvement is found
+        else:
+            limited_run_count += 1  # Continue if no improvement
+
+        # Reassign any non-optimal gate assignments and handle conflicts
+        reassign_vertices(refined_solution, weights, M_validGate, P_preferences)
+        eliminate_conflicts(refined_solution, M_validGate, U_successor)
+
+    return best_solution
 
 
 def readable_score(n):
