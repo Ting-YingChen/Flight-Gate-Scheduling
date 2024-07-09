@@ -617,15 +617,18 @@ def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_succ
 
     return best_solution, best_score
 
-def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
-                                           shadow_constraints, num_flights,
-                                           activities_to_flights, gates_to_indices, flights_to_activities,
-                                           large_negative, sc_per_act_gate_pair, sc_per_gate):
-    # Algorithm 3 + 2-opt
-    current_solution = initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor)
-    best_solution = refine_clusters(current_solution, num_activities, num_gates, weights, shadow_constraints, flights_to_activities,
-                        activities_to_flights, gates_to_indices)
-    best_score, score_excl_penalties, no_unassigned_activities = calculate_total_score(best_solution, weights, large_negative)
+def pre_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                               shadow_constraints, num_flights,
+                               activities_to_flights, gates_to_indices, flights_to_activities,
+                               large_negative, sc_per_act_gate_pair, sc_per_gate):
+    """Performs a 2-opt optimization specifically for gate assignments before any detailed refinement steps."""
+
+    current_solution, nodes_to_clusters = initialize_clusters(weights, activities_to_flights, gates_to_indices,
+                                                              U_successor)
+    best_score = calculate_total_score(current_solution, weights, large_negative)[0]
+    best_score0 = best_score
+    best_solution = copy.deepcopy(current_solution)
+    best_nodes_to_clusters = copy.deepcopy(nodes_to_clusters)
 
     limited_run_count = 0
     run_count = 1
@@ -633,25 +636,66 @@ def pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_s
         print(f"\n================================ Run n°{run_count} ================================\n"
               f"Starting new run. Value of current solution: {readable_score(best_score)}")
 
-        # Algorithm 1
-        # Apply a 2-opt step to refine the solution further by examining pairs of activities
-        two_opt_refined_solution = apply_two_opt_step(current_solution, weights, U_successor)
-        refined_solution = refine_clusters(two_opt_refined_solution, num_activities, num_gates, weights, shadow_constraints, flights_to_activities,
-                        activities_to_flights, gates_to_indices)
-        current_score, score_excl_penalties, no_unassigned_activities = calculate_total_score(refined_solution, weights, large_negative)
+        # Apply 2-opt step before any refinement to possibly find initial improvements
+        improvement_found, two_opt_solution, two_opt_nodes_to_clusters = apply_two_opt_step(
+            best_solution, best_nodes_to_clusters, weights, large_negative, activities_to_flights, M_validGate)
 
-        if current_score > best_score:
-            best_solution = refined_solution[:]
-            best_score = current_score
+        if improvement_found:
+            print("Initial 2-opt improvement found, applying refinement next.")
+            best_solution = copy.deepcopy(two_opt_solution)
+            best_nodes_to_clusters = copy.deepcopy(two_opt_nodes_to_clusters)
+            best_score = calculate_total_score(best_solution, weights, large_negative)[0]
             limited_run_count = 0  # Reset if an improvement is found
         else:
-            limited_run_count += 1  # Continue if no improvement
+            print("No initial improvement found with 2-opt, proceeding with refinement.")
+
+        # Refinement step to move individual activities
+        refined_solution, refined_nodes_to_clusters, cluster_contains_gate, cluster_to_gates = refine_clusters(
+            best_solution, best_nodes_to_clusters, num_activities, num_gates, weights, shadow_constraints,
+            flights_to_activities, activities_to_flights, gates_to_indices, large_negative,
+            sc_per_act_gate_pair, sc_per_gate)
+        score_alg1 = calculate_total_score(refined_solution, weights, large_negative)[0]
+
+        print(f" • Algorithm 1 (refinement) terminated. Value of solution: {score_alg1}")
+
+        if score_alg1 > best_score:
+            best_solution = copy.deepcopy(refined_solution)
+            best_nodes_to_clusters = copy.deepcopy(refined_nodes_to_clusters)
+            best_score = score_alg1
+            limited_run_count = 0
+        else:
+            limited_run_count += 1
+        run_count += 1
 
         # Reassign any non-optimal gate assignments and handle conflicts
-        reassign_vertices(refined_solution, weights, M_validGate, P_preferences)
-        eliminate_conflicts(refined_solution, M_validGate, U_successor)
+        # Reassign unassigned activities
+        reassigned_solution, reassigned_nodes_to_clusters = reassign_vertices(refined_solution, cluster_contains_gate,
+                                                                              cluster_to_gates, weights, M_validGate,
+                                                                              P_preferences,
+                                                                              activities_to_flights,
+                                                                              refined_nodes_to_clusters)
+        re_score, re_score_excl_penalties, re_no_unassigned_activities = calculate_total_score(reassigned_solution,
+                                                                                               weights, large_negative)
+        print(f" • Value after reassignining unassigned activities: {readable_score(re_score)}")
 
-    return best_solution
+        # Handle any conflicts in the solution
+        eliminate_solution, eliminate_nodes_to_clusters = eliminate_conflicts(reassigned_solution, M_validGate,
+                                                                              U_successor, activities_to_flights,
+                                                                              flights_to_activities,
+                                                                              reassigned_nodes_to_clusters,
+                                                                              shadow_constraints, weights,
+                                                                              large_negative)
+        # current_solution = copy.deepcopy(eliminate_solution)
+        el_score, el_score_excl_penalties, el_no_unassigned_activities = calculate_total_score(eliminate_solution,
+                                                                                               weights, large_negative)
+        print(
+            f" • Value after eliminating conflicts: {readable_score(el_score)} (excl. penalties: {readable_score(el_score_excl_penalties)})"
+            f"\n   /!\ There are still {el_no_unassigned_activities} activities out of {num_activities} ({str(100 * el_no_unassigned_activities / num_activities)[:4]}%)")
+        print(f"   Value of current best solution: {readable_score(best_score)}\n"
+              f"   Improvement/deterioration from the start by {readable_score(best_score - best_score0)} ({str((best_score - best_score0) * 100 / abs(best_score0))[0:7]}%)")
+
+
+    return best_solution, best_score
 
 
 def readable_score(n):

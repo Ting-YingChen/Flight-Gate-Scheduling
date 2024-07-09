@@ -61,23 +61,28 @@ def main(local_path, EstimatedOrReal):
     #                                                          'solution': iterative_refinement_solution}
     # print(f"Done. Runtime = {time.time() - start_time} seconds.")
 
-    # 2-opt Integrated Heuristic Model
-    start_time = time.time()
-    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting 2-opt heuristic.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    integrated_solution = Heuristic.integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
-                                           shadow_constraints, num_flights,
-                                           activities_to_flights, gates_to_indices, flights_to_activities,
-                                           large_negative, sc_per_act_gate_pair, sc_per_gate)
-    integrated_duration = time.time() - start_time
-    performance_records['Integrated 2-opt Heuristic'] = {'duration': integrated_duration,
-                                                         'solution': integrated_solution}
-    print(f"Done. Runtime = {time.time() - start_time} seconds.")
-
-    # # Pre-optimized 2-opt Gate Assignment Model
+    # # 2-opt Integrated Heuristic Model
     # start_time = time.time()
-    # pre_optimized_solution = Heuristic.pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences, activities_to_flights, gates_to_indices)
-    # pre_optimized_duration = time.time() - start_time
-    # performance_records['Pre-optimized 2-opt'] = {'duration': pre_optimized_duration, 'solution': pre_optimized_solution}
+    # print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting 2-opt integrated heuristic.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    # integrated_solution = Heuristic.integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+    #                                        shadow_constraints, num_flights,
+    #                                        activities_to_flights, gates_to_indices, flights_to_activities,
+    #                                        large_negative, sc_per_act_gate_pair, sc_per_gate)
+    # integrated_duration = time.time() - start_time
+    # performance_records['Integrated 2-opt Heuristic'] = {'duration': integrated_duration,
+    #                                                      'solution': integrated_solution}
+    # print(f"Done. Runtime = {time.time() - start_time} seconds.")
+
+    # Pre-optimized 2-opt Gate Assignment Model
+    start_time = time.time()
+    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting pre 2-opt heuristic.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    pre_optimized_solution = Heuristic.pre_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                               shadow_constraints, num_flights,
+                               activities_to_flights, gates_to_indices, flights_to_activities,
+                               large_negative, sc_per_act_gate_pair, sc_per_gate)
+    pre_optimized_duration = time.time() - start_time
+    performance_records['Pre 2-opt'] = {'duration': pre_optimized_duration, 'solution': pre_optimized_solution}
+    print(f"Done. Runtime = {time.time() - start_time} seconds.")
 
     # Print or log the performance
     # for model, record in performance_records.items():
