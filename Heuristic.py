@@ -406,49 +406,46 @@ def apply_two_opt_step(current_solution, nodes_to_clusters, weights, large_negat
 
     # Attempt swaps between all pairs of vertices not in the same cluster
     for cluster_a_id in current_solution:
-        for cluster_b_id in current_solution:
-            if cluster_a_id == cluster_b_id:
-                continue  # Skip if clusters are the same
+        for vertex_a in current_solution[cluster_a_id]:
+            for cluster_b_id in current_solution:
+                if cluster_a_id == cluster_b_id:
+                    continue  # Skip if clusters are the same
 
-    for vertex_a in list(current_solution.keys()):
-        for vertex_b in list(current_solution.keys()):
-            if vertex_a != vertex_b and nodes_to_clusters[vertex_a] != nodes_to_clusters[vertex_b]:
-                # Skip invalid swaps based on vertex types
-                if vertex_is_gate[vertex_a] and vertex_is_gate[vertex_b]:
-                    continue  # Example: Skip gate-gate swaps if not allowed
+                for vertex_b in current_solution[cluster_b_id]:
+                    if vertex_a != vertex_b and nodes_to_clusters[vertex_a] != nodes_to_clusters[vertex_b]:
+                        # Ensure that the swap is only attempted between vertices of the same type
+                        if vertex_is_gate[vertex_a] != vertex_is_gate[vertex_b]:
+                            continue  # Skip swaps between different types (gates and activities)
 
-                # Perform the swap
-                cluster_a_id = nodes_to_clusters[vertex_a]
-                cluster_b_id = nodes_to_clusters[vertex_b]
+                            # Perform the swap
+                            current_solution[cluster_a_id].remove(vertex_a)
+                            current_solution[cluster_b_id].remove(vertex_b)
+                            current_solution[cluster_a_id].append(vertex_b)
+                            current_solution[cluster_b_id].append(vertex_a)
 
-                current_solution[cluster_a_id].remove(vertex_a)
-                current_solution[cluster_b_id].remove(vertex_b)
-                current_solution[cluster_a_id].append(vertex_b)
-                current_solution[cluster_b_id].append(vertex_a)
+                            # Update the mapping after swap
+                            nodes_to_clusters[vertex_a] = cluster_b_id
+                            nodes_to_clusters[vertex_b] = cluster_a_id
 
-                # Update the mapping after swap
-                nodes_to_clusters[vertex_a] = cluster_b_id
-                nodes_to_clusters[vertex_b] = cluster_a_id
+                            # Recalculate the score after the swap
+                            new_score, _, _ = calculate_total_score(current_solution, weights, large_negative)
 
-                # Recalculate the score after the swap
-                new_score, _, _ = calculate_total_score(current_solution, weights, large_negative)
+                            # If the new score is better, accept the swap
+                            if new_score > best_score:
+                                best_score = new_score
+                                best_solution = copy.deepcopy(current_solution)
+                                best_nodes_to_clusters = copy.deepcopy(nodes_to_clusters)
+                                improved = True
+                            else:
+                                # Swap back if no improvement
+                                current_solution[cluster_a_id].remove(vertex_b)
+                                current_solution[cluster_b_id].remove(vertex_a)
+                                current_solution[cluster_a_id].append(vertex_a)
+                                current_solution[cluster_b_id].append(vertex_b)
 
-                # If the new score is better, accept the swap
-                if new_score > initial_score:
-                    best_score = new_score
-                    best_solution = copy.deepcopy(current_solution)
-                    best_nodes_to_clusters = copy.deepcopy(nodes_to_clusters)
-                    improved = True
-                else:
-                    # Swap back if no improvement
-                    current_solution[cluster_a_id].remove(vertex_b)
-                    current_solution[cluster_b_id].remove(vertex_a)
-                    current_solution[cluster_a_id].append(vertex_a)
-                    current_solution[cluster_b_id].append(vertex_b)
-
-                    # Revert the mapping after swap back
-                    nodes_to_clusters[vertex_a] = cluster_a_id
-                    nodes_to_clusters[vertex_b] = cluster_b_id
+                                # Revert the mapping after swap back
+                                nodes_to_clusters[vertex_a] = cluster_a_id
+                                nodes_to_clusters[vertex_b] = cluster_b_id
 
     return improved, best_solution, best_nodes_to_clusters
 
