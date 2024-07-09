@@ -553,9 +553,6 @@ def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_succ
     best_solution = copy.deepcopy(current_solution)     # Otherwise while loop always runs with current solution
     best_nodes_to_clusters = copy.deepcopy(nodes_to_clusters)   # Otherwise nodes_to_clusters is modified
 
-    # improvement_found, two_opt_solution, two_opt_nodes_to_clusters = apply_two_opt_step(
-    #     current_solution, nodes_to_clusters, weights, large_negative, activities_to_flights, M_validGate)
-
     limited_run_count = 0
     run_count = 1
     while limited_run_count < 7:
@@ -640,14 +637,16 @@ def pre_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, 
         improvement_found, two_opt_solution, two_opt_nodes_to_clusters = apply_two_opt_step(
             best_solution, best_nodes_to_clusters, weights, large_negative, activities_to_flights, M_validGate)
 
+        # Update solution if improvement is found
         if improvement_found:
-            print("Initial 2-opt improvement found, applying refinement next.")
             best_solution = copy.deepcopy(two_opt_solution)
             best_nodes_to_clusters = copy.deepcopy(two_opt_nodes_to_clusters)
             best_score = calculate_total_score(best_solution, weights, large_negative)[0]
+            print(f"2-opt improvement found: New score {best_score}")
             limited_run_count = 0  # Reset if an improvement is found
         else:
-            print("No initial improvement found with 2-opt, proceeding with refinement.")
+            print("No improvement found with 2-opt, proceeding with refinement.")
+            limited_run_count += 1  # Increment count if no improvement
 
         # Refinement step to move individual activities
         refined_solution, refined_nodes_to_clusters, cluster_contains_gate, cluster_to_gates = refine_clusters(
@@ -659,12 +658,13 @@ def pre_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, 
         print(f" • Algorithm 1 (refinement) terminated. Value of solution: {score_alg1}")
 
         if score_alg1 > best_score:
+            print(f"Refinement improved score to {score_alg1}")
             best_solution = copy.deepcopy(refined_solution)
             best_nodes_to_clusters = copy.deepcopy(refined_nodes_to_clusters)
             best_score = score_alg1
             limited_run_count = 0
-        else:
-            limited_run_count += 1
+        # else:
+        #     limited_run_count += 1
         run_count += 1
 
         # Reassign any non-optimal gate assignments and handle conflicts
