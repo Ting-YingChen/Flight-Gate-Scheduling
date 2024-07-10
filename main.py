@@ -12,7 +12,7 @@ def main(local_path, EstimatedOrReal):
     alpha2 = 3  # Reward for avoiding tows
     alpha3 = 100  # Penalty scaling factor for buffer time deficits
     t_max = 30
-
+#
     # Import data
     (flights, num_flights, gates, num_gates, T_timeDiff, Gates_N,
      Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close,

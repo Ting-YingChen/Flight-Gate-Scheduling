@@ -460,7 +460,7 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
               f"\n   /!\ There are still {el_no_unassigned_activities} unassigned activities out of {num_activities} ({str(100*el_no_unassigned_activities/num_activities)[:4]}%)")
         print(f"   Value of current best solution: {readable_score(best_score)}\n"
               f"   Improvement/deterioration from the start by {readable_score(best_score-best_score0)} ({str((best_score-best_score0)*100/abs(best_score0))[0:7]}%)")
-        print(f"================================= Add: {el_score_excl_penalties}")
+        print(f"================================= Add: {el_score_excl_penalties}")  #
 
         suboptimalGates, amountSuboptimalGates, towings, amountTowings = suboptimalGates_and_towing(refined_solution, flights_to_activities, activities_to_flights, refined_nodes_to_clusters)
         print(f"   Of the 26 remote (suboptimal) gates, {amountSuboptimalGates} have activities ({str(100*(amountSuboptimalGates)/26)[0:5]}), and {amountTowings} towings.")

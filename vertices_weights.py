@@ -77,7 +77,7 @@ def get_weight_matrix(num_activities, activities_to_flights, T_timeDiff, P_prefe
             else:
                 weights[i][k] = large_negative
                 weights[k][i] = large_negative
-
+#
     # 3. weights between gates (large negative)
     for g1 in gates_to_indices:  # Change to num_gates if it works
         for g2 in gates_to_indices:

@@ -217,7 +217,7 @@ def createInputData(local_path, check_output, EstimatedOrReal):
     shadow_constraints = build_ShadowConstraints(activities_to_flights, T_timeDiff, M_validGate, Gates_N)
     gates_to_indices, indices_to_gates = mapGatesToIndices(Gates_N)
 
-    # if desired: print some sample data from the results
+    # if desired: print some sample data from the resultss
     if check_output:
         # Print the first few rows of the flights data to confirm correct loading and indexing
         print("First few flights data:")
