@@ -8,7 +8,7 @@ import Heuristic
 def main(local_path, EstimatedOrReal):
     # 0. define all relevant model parameters
     # Parameters based on experiences
-    alpha1 = 1  # Preference scaling factor
+    alpha1 = 10  # Preference scaling factor
     alpha2 = 3  # Reward for avoiding tows
     alpha3 = 100  # Penalty scaling factor for buffer time deficits
     t_max = 30
@@ -83,11 +83,11 @@ LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management
 LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
 LOCAL_PATH_Arthur_light = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels (less flights).xlsm'
 LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels.xlsm'
-LOCAL_PATH = LOCAL_PATH_Andreas
+LOCAL_PATH = LOCAL_PATH_Arthur
 
 if __name__ == "__main__":
-    # EstimatedOrReal = "Estimated"
-    EstimatedOrReal = "Real"
+    EstimatedOrReal = "Estimated"
+    # EstimatedOrReal = "Real"
     main(LOCAL_PATH, EstimatedOrReal)
 
 
