@@ -383,6 +383,38 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
 
     return best_solution, best_nodes_to_clusters, best_cluster_contains_gate, best_cluster_to_gates
 
+def suboptimalGates_and_towing(solution, flights_to_activities, activities_to_flights, nodes_to_clusters):
+    suboptimal_gates = []
+    towings = []
+
+    # Iterate over each cluster in the solution
+    for cluster in solution:
+        for vertex in cluster:
+
+            # Check if vertex is a gate
+            if not vertex_is_act(vertex):
+                gate = vertex
+
+                # Check if gate is necessarily remote (e.g., gate[0] not 1 or 2)
+                if gate[0] != 1 and gate[0] != 2:
+                    suboptimal_gates.append(gate)
+            else: # vertex = activity
+                # Process when vertex is an activity
+                flight = activities_to_flights[vertex]
+                flight_is_towed = False
+                # Check all activities related to this flight
+                otherActivities = flights_to_activities[flight]
+
+                for otherActivity in otherActivities:
+                    if nodes_to_clusters[otherActivity] != cluster: # if otherActivity is not in same cluster
+                        flight_is_towed = True
+                        break
+
+                # If any related activity is not in the same cluster, mark the flight as towed
+                if flight_is_towed:
+                    towings.append(flight)
+
+    return suboptimal_gates, towings
 
 def get_related_activities(vertex, activities_to_flights, current_solution):
     # Placeholder function: implement based on current data structure
@@ -485,6 +517,7 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
                                            large_negative, sc_per_act_gate_pair, sc_per_gate):
     ''' Algorithm 3 '''
 
+
     # Algorithm 2
     current_solution, nodes_to_clusters = initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor)
     best_score = calculate_total_score(current_solution, weights, large_negative)[0]
@@ -498,14 +531,17 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
         print(f"\n================================ Run n°{run_count} ================================\n"
               f"Starting new run. Value of current solution: {readable_score(best_score)}")
 
-        # Algorithm 1
+        # Algorithm 1: refining clusters
         refined_solution, refined_nodes_to_clusters, cluster_contains_gate, cluster_to_gates = (
             refine_clusters(best_solution, best_nodes_to_clusters, num_activities, num_gates, weights, shadow_constraints,
                             flights_to_activities, activities_to_flights, gates_to_indices, large_negative,
                             sc_per_act_gate_pair, sc_per_gate))
         score_alg1, score_excl_penalties, no_unassigned_activities = calculate_total_score(refined_solution, weights, large_negative)
         print(f" • Algorithm 1 (refinement) terminated. Value of solution: {readable_score(score_alg1)}"
-              f" ({readable_score(score_alg1-best_score0)} better than previous run)")
+              f" ({readable_score(score_alg1-best_score0)} better than the initial value.)")
+        suboptimal_gates, towings = suboptimalGates_and_towing(refined_solution, flights_to_activities,
+                                                           activities_to_flights, nodes_to_clusters)
+        print(f"Post-refinement: {len(suboptimal_gates)} suboptimal gate assignments, {len(towings)} towings required.")
 
         if score_alg1 == best_score:
             print("No improvement in solution; terminating the process.")
@@ -519,6 +555,10 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
             limited_run_count = 0  # Reset the limit run count if improvement is found
             run_count +=1
             # print("New best solution found, score updated:", readable_score(best_score))
+            suboptimal_gates, towings = suboptimalGates_and_towing(best_solution, flights_to_activities,
+                                                               activities_to_flights, nodes_to_clusters)
+            print(f"New best solution: {len(suboptimal_gates)} suboptimal gate assignments, {len(towings)} towings required.")
+
 
         else:
             limited_run_count += 1  # Increment limit run count if no improvement
@@ -528,7 +568,10 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
         reassigned_solution, reassigned_nodes_to_clusters = reassign_vertices(refined_solution, cluster_contains_gate, cluster_to_gates, weights, M_validGate, P_preferences,
                                      activities_to_flights, refined_nodes_to_clusters)
         re_score, re_score_excl_penalties, re_no_unassigned_activities = calculate_total_score(reassigned_solution, weights, large_negative)
-        print(f" • Value after reassignining unassigned activities: {readable_score(re_score)}")
+        print(f" • Value after reassigning unassigned activities: {readable_score(re_score)}")
+        suboptimal_gates, towings = suboptimalGates_and_towing(reassigned_solution, flights_to_activities,
+                                                           activities_to_flights, nodes_to_clusters)
+        print(f"Post-reassignment: {len(suboptimal_gates)} suboptimal gate assignments, {len(towings)} towings required.")
 
         # Handle any conflicts in the solution
         eliminate_solution, eliminate_nodes_to_clusters = eliminate_conflicts(reassigned_solution, M_validGate, U_successor, activities_to_flights, flights_to_activities,
@@ -536,7 +579,11 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
         # current_solution = copy.deepcopy(eliminate_solution)
         el_score, el_score_excl_penalties, el_no_unassigned_activities = calculate_total_score(eliminate_solution, weights, large_negative)
         print(f" • Value after eliminating conflicts: {readable_score(el_score)} (excl. penalties: {readable_score(el_score_excl_penalties)})"
-              f"\n   /!\ There are still {el_no_unassigned_activities} activities out of {num_activities} ({str(100*el_no_unassigned_activities/num_activities)[:4]}%)")
+              f"\n   /!\ There are still {el_no_unassigned_activities} activities out of {num_activities} unassigned ({str(100*el_no_unassigned_activities/num_activities)[:4]}%).")
+        suboptimal_gates, towings = suboptimalGates_and_towing(eliminate_solution, flights_to_activities,
+                                                           activities_to_flights, nodes_to_clusters)
+        print(f"Post-conflict elimination: {len(suboptimal_gates)} suboptimal gate assignments, {len(towings)} towings required.")
+
         print(f"   Value of current best solution: {readable_score(best_score)}\n"
               f"   Improvement/deterioration from the start by {readable_score(best_score-best_score0)} ({str((best_score-best_score0)*100/abs(best_score0))[0:7]}%)")
 
