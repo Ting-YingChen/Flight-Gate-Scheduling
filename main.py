@@ -8,11 +8,11 @@ import Heuristic
 def main(local_path, EstimatedOrReal):
     # 0. define all relevant model parameters
     # Parameters based on experiences
-    alpha1 = 1  # Preference scaling factor
+    alpha1 = 10  # Preference scaling factor
     alpha2 = 3  # Reward for avoiding tows
     alpha3 = 100  # Penalty scaling factor for buffer time deficits
     t_max = 30
-
+#
     # Import data
     (flights, num_flights, gates, num_gates, T_timeDiff, Gates_N,
      Flight_No, ETA, ETD, RTA, RTD, AC_size, Gate_No, Max_Wingspan, Is_Int, Is_LowCost, Is_Close,
@@ -48,31 +48,26 @@ def main(local_path, EstimatedOrReal):
     # Iterative Refinement Heuristic Model
     sc_per_act_gate_pair, sc_per_gate = Instance.convert_sc_to_dicts(shadow_constraints)
 
-    # start_time = time.time()
-    # print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting standard heuristic.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    # iterative_refinement_solution, iterative_refinement_score = (
-    #     Heuristic.iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
-    #                                                      shadow_constraints, num_flights,
-    #                                                      activities_to_flights, gates_to_indices, flights_to_activities,
-    #                                                      large_negative,
-    #                                                      sc_per_act_gate_pair, sc_per_gate))
-    # iterative_refinement_duration = time.time() - start_time
-    # performance_records['Iterative Refinement Heuristic'] = {'duration': iterative_refinement_duration,
-    #                                                          'solution': iterative_refinement_solution}
-    # print(f"Done. Runtime = {time.time() - start_time} seconds.")
-
-    # 2-opt Integrated Heuristic Model
     start_time = time.time()
-    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting 2-opt heuristic.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    integrated_solution = Heuristic.integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
-                                           shadow_constraints, num_flights,
-                                           activities_to_flights, gates_to_indices, flights_to_activities,
-                                           large_negative, sc_per_act_gate_pair, sc_per_gate)
-    integrated_duration = time.time() - start_time
-    performance_records['Integrated 2-opt Heuristic'] = {'duration': integrated_duration,
-                                                         'solution': integrated_solution}
+    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting standard heuristic.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    iterative_refinement_solution, iterative_refinement_score = (
+        Heuristic.iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                                                         shadow_constraints, num_flights,
+                                                         activities_to_flights, gates_to_indices, flights_to_activities,
+                                                         large_negative,
+                                                         sc_per_act_gate_pair, sc_per_gate))
+    iterative_refinement_duration = time.time() - start_time
+    performance_records['Iterative Refinement Heuristic'] = {'duration': iterative_refinement_duration,
+                                                             'solution': iterative_refinement_solution}
     print(f"Done. Runtime = {time.time() - start_time} seconds.")
 
+    # # 2-opt Integrated Heuristic Model
+    # start_time = time.time()
+    # integrated_solution = Heuristic.integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences, activities_to_flights, gates_to_indices)
+    # integrated_duration = time.time() - start_time
+    # performance_records['Integrated 2-opt Heuristic'] = {'duration': integrated_duration,
+    #                                                      'solution': integrated_solution}
+    #
     # # Pre-optimized 2-opt Gate Assignment Model
     # start_time = time.time()
     # pre_optimized_solution = Heuristic.pre_optimized_2opt_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences, activities_to_flights, gates_to_indices)
@@ -88,11 +83,11 @@ LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management
 LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
 LOCAL_PATH_Arthur_light = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels (less flights).xlsm'
 LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels.xlsm'
-LOCAL_PATH = LOCAL_PATH_TingYing
+LOCAL_PATH = LOCAL_PATH_Arthur
 
 if __name__ == "__main__":
-    # EstimatedOrReal = "Estimated"
-    EstimatedOrReal = "Real"
+    EstimatedOrReal = "Estimated"
+    # EstimatedOrReal = "Real"
     main(LOCAL_PATH, EstimatedOrReal)
 
 

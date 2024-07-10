@@ -557,12 +557,15 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
         # Handle any conflicts in the solution
         eliminate_solution, eliminate_nodes_to_clusters = eliminate_conflicts(reassigned_solution, M_validGate, U_successor, activities_to_flights, flights_to_activities,
                             reassigned_nodes_to_clusters, shadow_constraints, weights, large_negative)
-        # current_solution = copy.deepcopy(eliminate_solution)
         el_score, el_score_excl_penalties, el_no_unassigned_activities = calculate_total_score(eliminate_solution, weights, large_negative)
         print(f" • Value after eliminating conflicts: {readable_score(el_score)} (excl. penalties: {readable_score(el_score_excl_penalties)})"
-              f"\n   /!\ There are still {el_no_unassigned_activities} activities out of {num_activities} ({str(100*el_no_unassigned_activities/num_activities)[:4]}%)")
+              f"\n   /!\ There are still {el_no_unassigned_activities} unassigned activities out of {num_activities} ({str(100*el_no_unassigned_activities/num_activities)[:4]}%)")
         print(f"   Value of current best solution: {readable_score(best_score)}\n"
               f"   Improvement/deterioration from the start by {readable_score(best_score-best_score0)} ({str((best_score-best_score0)*100/abs(best_score0))[0:7]}%)")
+        print(f"================================= Add: {el_score_excl_penalties}")  #
+
+        suboptimalGates, amountSuboptimalGates, towings, amountTowings = suboptimalGates_and_towing(refined_solution, flights_to_activities, activities_to_flights, refined_nodes_to_clusters)
+        print(f"   Of the 26 remote (suboptimal) gates, {amountSuboptimalGates} have activities ({str(100*(amountSuboptimalGates)/26)[0:5]}), and {amountTowings} towings.")
 
     return best_solution, best_score
 
@@ -680,3 +683,50 @@ def integrated_2opt_gate_optimization(num_activities, num_gates, weights, U_succ
 
 def readable_score(n):
     return f"{n:,}"
+
+
+
+def suboptimalGates_and_towing(solution, flights_to_activities, activities_to_flights, nodes_to_clusters):
+    suboptimalGates = []
+    towings = []
+
+    for cluster in solution:
+        for vertex in solution[cluster]:
+            if not vertex_is_act(vertex):   # vertex = gates
+                gate = vertex
+                if gate[0] != '1' and gate[0] != '2':   # If gate is remote
+                    if len(solution[cluster]) > 1:      # If gate is not alone in the cluster
+                        suboptimalGates.append(gate)
+            else:   # vertex = activity
+                # vertex_cluster = nodes_to_clusters[vertex]
+                flight = activities_to_flights[vertex]
+                flight_is_towed = False
+                otherActivities = flights_to_activities[flight]
+                for otherActivity in otherActivities:
+                    if nodes_to_clusters[otherActivity] != cluster: # if otherActivity is not in same cluster
+                        flight_is_towed = True
+                if flight_is_towed:
+                    towings.append(flight)
+
+    amountSuboptimalGates = len(suboptimalGates)
+    amountTowings = len(towings)
+
+    return suboptimalGates, amountSuboptimalGates, towings, amountTowings
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
