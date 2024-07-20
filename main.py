@@ -43,15 +43,14 @@ def main(local_path, EstimatedOrReal):
     # performance_records['CPP'] = {'duration': cpp_duration, 'solution': cpp_solution}
 
     # Heuristic Model
-    # todo: adjust it so it works without 'vertices' list
 
     # Iterative Refinement Heuristic Model
     sc_per_act_gate_pair, sc_per_gate = Instance.convert_sc_to_dicts(shadow_constraints)
 
     start_time = time.time()
-    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting standard heuristic.\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting standard heuristic\n~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     iterative_refinement_solution, iterative_refinement_score = (
-        Heuristic.iterative_refinement_gate_optimization(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+        Heuristic.iterative_refinement_gate_optimization_new(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
                                                          shadow_constraints, num_flights,
                                                          activities_to_flights, gates_to_indices, flights_to_activities,
                                                          large_negative,

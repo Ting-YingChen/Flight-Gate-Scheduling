@@ -133,7 +133,7 @@ def eliminate_conflicts(solution, M_validGate, U_successor, activities_to_flight
             for vertex_j in solution[cluster_id]:
                 if vertex_i == vertex_j:
                     continue
-                if weights[vertex_i][vertex_j] == large_negative:   # i.e. they overlap
+                if weights[vertex_i][vertex_j] == large_negative:   # i.e. the activities overlap
                     # remove vertex_j from the cluster and insert it into an empty cluster, together with all of its successors
                     if vertex_is_act(vertex_j):
                         vertex_to_remove = vertex_j
@@ -179,6 +179,136 @@ def eliminate_conflicts(solution, M_validGate, U_successor, activities_to_flight
     print("~Finished eliminating all gate and shadow conflicts~")
 
     return solution, nodes_to_clusters
+
+def find_my_cluster(activity, solution):
+    for cluster_id in solution:
+        for vertex in solution[cluster_id]:
+            if vertex == activity:
+                return cluster_id
+    return None
+
+def eliminate_conflicts_new(solution, M_validGate, U_successor, activities_to_flights, flights_to_activities,
+                        nodes_to_clusters_input, shadow_constraints, weights, large_negative, P_preferences,
+                            num_activities, num_gates, gates_to_indices, sc_per_act_gate_pair, sc_per_gate):
+    """
+    Removes gate conflicts by reassigning conflicting flights to alternative gates or to a dummy gate if no alternatives exist.
+    """
+
+    print('============= Alg3 has started =============')
+
+    current_solution = copy.deepcopy(solution)
+    best_solution = copy.deepcopy(solution)
+    nodes_to_clusters = copy.deepcopy(nodes_to_clusters_input)
+
+    run_count = 0
+    while run_count < 8:
+        count2 = 0
+        print(f'========================== I have started a new run, run_count = {run_count} ==========================\n'
+              f'========================== # of clusters = {len(current_solution)} ==========================')
+        run_count += 1
+        for cluster_id in current_solution:
+            count2 += 1
+            if count2%10 == 0 or count2 > (len(current_solution)-5):
+                print(f'Working on cluster n°{count2}')
+            if current_solution[cluster_id] == []:
+                continue
+            PossiblyGate = current_solution[cluster_id][0]  # first vertex of cluster
+            if not vertex_is_act(PossiblyGate) or current_solution[cluster_id] == []:
+                # -> vertex is a gate, so the corresponding activities are not assigned to the dummy gate
+                # skip empty clusters
+                continue
+            else:
+                for vertex_i in current_solution[cluster_id]: # all activities in that cluster, they are assigned to the dummy gate
+                    #### 2.1 Assign i to a gate ####
+                    flight = activities_to_flights[vertex_i]
+                    maximum_preference_gates = [gate for gate in P_preferences[flight] if P_preferences[flight][gate] == max(P_preferences[flight].values())]
+                    target_gate = random.choice(maximum_preference_gates)
+                    target_cluster_id = nodes_to_clusters[target_gate]
+                    current_solution[target_cluster_id].append(vertex_i)
+                    nodes_to_clusters[vertex_i] = target_cluster_id
+                    # print(f"Reassigned activity {activity} from {cluster_id} to {target_cluster_id}")
+                    current_solution[cluster_id] = []
+
+                    #### 2.2 Eliminate gate conflicts ####
+                    for vertex_j in current_solution[target_cluster_id]:    # for all j in N: j in same clique...
+                        if vertex_j != vertex_i and weights[vertex_i][vertex_j] == large_negative:  #... and w_ij = large negative
+                            # find empty cluster and insert activities
+                            new_cluster_found = False
+                            for tci_el_g_con in current_solution:   # Target Cluster ID for Eliminating Gate Conflicts
+                                if current_solution[tci_el_g_con] == [] and not new_cluster_found:
+                                    new_cluster_found = True
+                                    allAct_SameFlight = flights_to_activities[activities_to_flights[vertex_j]]
+                                    current_solution[tci_el_g_con] = allAct_SameFlight.copy()
+                                    for act in allAct_SameFlight:
+                                        # if nodes_to_clusters[act] in current_solution:  # Sometimes error 'remove(x): x not in list. Not optimal but yeah for now
+                                        if act != vertex_j:
+                                            current_solution[find_my_cluster(act, current_solution)].remove(act)
+                                        nodes_to_clusters[act] = tci_el_g_con
+                            if not new_cluster_found:
+                                raise Exception("Error, expection raised: no empty cluster found to eliminate GATE conflict")
+
+                    #### 2.3 Eliminate shadow conflicts ####
+                    for new_cluster in current_solution:    # Check all j's that might have a SC with i
+                        if current_solution[new_cluster] == []:
+                            continue
+                        Gate_of_J = current_solution[new_cluster][0]  # first vertex of cluster
+                        if vertex_is_act(Gate_of_J) or current_solution[new_cluster] == []:  # If cluster is empty or 'Dummy'
+                            continue
+                        else:
+                             if (vertex_i,target_gate,vertex_j,Gate_of_J) in shadow_constraints and weights[vertex_i][vertex_j] == large_negative:
+                                 # find an empty cluster and insert all relevant activities
+                                 new_cluster_found = False
+                                 for tci_el_sc_con in current_solution:
+                                     if current_solution[tci_el_sc_con] == [] and not new_cluster_found:
+                                         new_cluster_found = True
+                                         activities_like_j = flights_to_activities[activities_to_flights[vertex_j]]
+                                         current_solution[tci_el_sc_con] = activities_like_j.copy()
+                                         for act in activities_like_j:
+                                             current_solution[nodes_to_clusters[act]].remove(act)
+                                             nodes_to_clusters[act] = tci_el_sc_con
+
+                                 if not new_cluster_found:
+                                     raise Exception("Error, expection raised: no empty cluster found to eliminate SHADOW CONSTRAINT conflict")
+
+        score_CS = calculate_total_score(current_solution, weights, large_negative)[0]
+        score_BS = calculate_total_score(best_solution, weights, large_negative)[0]
+        unassign_act_before = calculate_total_score(best_solution, weights, large_negative)[2]
+
+        print(f" • Value before eliminating conflicts: {readable_score(score_BS)}"
+            f"\n   /!\ There are {unassign_act_before} unassigned activities")
+
+        if score_CS > score_BS: # If score got better, make it the new best score and allow another run
+            best_solution = copy.deepcopy(current_solution)
+            best_nodes_to_clusters = copy.deepcopy(nodes_to_clusters)
+            run_count -= 1
+            print('score_CS > score_BS')
+
+        print("~Finished eliminating all gate and shadow conflicts~")
+
+        el_score, el_score_excl_penalties, el_no_unassigned_activities = calculate_total_score(best_solution, weights,
+                                                                                               large_negative)
+        print(f" • Value after eliminating conflicts: {readable_score(el_score)}"
+            f"\n   /!\ There are {el_no_unassigned_activities} unassigned activities")
+
+        # Algorithm 1
+        print("----------- Restarting Alg1 -----------")
+        alg1_output_solution, alg1_nodes_to_clusters, cluster_contains_gate, cluster_to_gates = (
+            refine_clusters(best_solution, best_nodes_to_clusters, num_activities, num_gates, weights,
+                            shadow_constraints,
+                            flights_to_activities, activities_to_flights, gates_to_indices, large_negative,
+                            sc_per_act_gate_pair, sc_per_gate))
+
+        new_score, new_score_excl_penalties, new_no_unassigned_activities = calculate_total_score(alg1_output_solution, weights,
+                                                                                               large_negative)
+        print(f" • Value after reinjecting in Alg1: {readable_score(new_score)}"
+            f"\n   /!\ There are {new_no_unassigned_activities} unassigned activities")
+
+        # Prepare to restart Alg3
+        current_solution = copy.deepcopy(alg1_output_solution)
+        nodes_to_clusters = copy.deepcopy(alg1_nodes_to_clusters)
+
+
+    return final_best_solution, nodes_to_clusters
 
 def initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor):
     """(Algorithm 2)"""
@@ -258,10 +388,9 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
     values_per_iterator = {0: current_score}  # keys = iterators r of the algorithm, values = obj. value of solution at r-th iteration
     # solutions_per_iterator = {0: copy.deepcopy(current_solution)}       # keys = iterators r of the algorithm, values = solution after performing r-th iteration
 
-    nontabu_vertices = list(activities_to_flights.keys())   # Only flight activities are made nontabu
     can_improve_more = True
 
-    vertex_is_gate = {}         # keys = vertex names, values = binary indicating if vertex is a gate vertex
+    vertex_is_gate = {}             # keys = vertex names, values = binary indicating if vertex is a gate vertex
     cluster_contains_gate = {}      # keys = cluster IDs , values = binary indicating if cluster already contains a gate vertex (used to shorten runtime of improvement step)
     cluster_to_gates = {}
 
@@ -280,15 +409,22 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
     solution_data_per_iterator = {0: (copy.deepcopy(current_solution), copy.deepcopy(nodes_to_clusters),
                                       copy.deepcopy(cluster_contains_gate), copy.deepcopy(cluster_to_gates))}
 
-    solution_iterator = 0       # index of the currently found solution (0=initial solution)
+    solution_iterator = 0           # index of the currently found solution (0=initial solution)
     maximum_move_count = 50000      # large number that should never be reached
+    count3 = 0
     while can_improve_more:
-        current_solution, nodes_to_clusters, cluster_contains_gate, cluster_to_gates = solution_data_per_iterator[solution_iterator]
+        count3 += 1
+        print(f'I AM ALG1, I DID r MOVES AND I CAN IMPROVE. Count = {count3}')
+
+        nontabu_vertices = list(activities_to_flights.keys())  # Only flight activities are made nontabu
         current_no_tabu_vertices = len(nontabu_vertices)        # used to check if any improving moves have been found in the current iteration
+
+        current_solution, nodes_to_clusters, cluster_contains_gate, cluster_to_gates = solution_data_per_iterator[solution_iterator]
+        target_solution = copy.deepcopy(current_solution)
 
         # for each vertex: find the best move that leads to a feasible neighbour
         for vertex in nontabu_vertices:
-            current_cluster_id = nodes_to_clusters[vertex]
+            current_cluster_id = find_my_cluster(vertex, current_solution)
             best_target_cluster_id = None
             best_score = current_score
 
@@ -316,8 +452,8 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
                                                         shadow_constraints, flights_to_activities, activities_to_flights,
                                                         nodes_to_clusters, sc_per_act_gate_pair, sc_per_gate)
 
-                    # 2. if target cluster is empty: current cluster needs to contain at least 2 elements
-                    if len(current_solution[target_cluster_id]) == 0 and len(current_solution[current_cluster_id]) == 2:
+                    # 2. if target cluster is empty: current cluster needs to contain at least 2 elements (if contains 1 -> move not allowed)
+                    if len(current_solution[target_cluster_id]) == 0 and len(current_solution[current_cluster_id]) == 1:
                         move_allowed = False
                     # # 3. (Arthur) if target cluster has no gate (activitiy would go to dummy gate), then move not allowed
                     # if cluster_contains_gate[target_cluster_id] == False:
@@ -332,7 +468,6 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
             move_is_improving = best_score > current_score
             move_exists = best_target_cluster_id is not None
             if move_is_improving and move_exists:
-                target_solution = copy.deepcopy(current_solution)
                 # move vertex to its new cluster and update its assigned cluster id
                 target_solution[current_cluster_id].remove(vertex)
                 target_solution[best_target_cluster_id].append(vertex)
@@ -377,7 +512,11 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
     values_sorted = dict(sorted(values_per_iterator.items(), key = lambda x: x[1], reverse=True))
     best_iterator = list(values_sorted.keys())[0]
     best_solution, best_nodes_to_clusters, best_cluster_contains_gate, best_cluster_to_gates = solution_data_per_iterator[best_iterator]
+
+    Alg1_unass_act = calculate_total_score(best_solution, weights, large_negative)[2]
+
     print(f"~Best reassignment solution found at {best_iterator}th iteration~")
+    print(f'--- I am alg1 and I have {Alg1_unass_act} unassigned activities ---')
 
     return best_solution, best_nodes_to_clusters, best_cluster_contains_gate, best_cluster_to_gates
 
@@ -464,6 +603,40 @@ def iterative_refinement_gate_optimization(num_activities, num_gates, weights, U
 
         suboptimalGates, amountSuboptimalGates, towings, amountTowings = suboptimalGates_and_towing(refined_solution, flights_to_activities, activities_to_flights, refined_nodes_to_clusters)
         print(f"   Of the 26 remote (suboptimal) gates, {amountSuboptimalGates} have activities ({str(100*(amountSuboptimalGates)/26)[0:5]}), and {amountTowings} towings.")
+
+    return best_solution, best_score
+
+def iterative_refinement_gate_optimization_new(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                                           shadow_constraints, num_flights,
+                                           activities_to_flights, gates_to_indices, flights_to_activities,
+                                           large_negative, sc_per_act_gate_pair, sc_per_gate):
+    # Algorithm 2
+    current_solution, nodes_to_clusters = initialize_clusters(weights, activities_to_flights, gates_to_indices, U_successor)
+    best_score = calculate_total_score(current_solution, weights, large_negative)[0]
+    best_score0 = best_score
+    best_solution = copy.deepcopy(current_solution)     # Otherwise while loop always runs with current solution
+    best_nodes_to_clusters = copy.deepcopy(nodes_to_clusters)   # Otherwise nodes_to_clusters is modified
+
+    # Algorithm 1
+    refined_solution, refined_nodes_to_clusters, cluster_contains_gate, cluster_to_gates = (
+        refine_clusters(best_solution, best_nodes_to_clusters, num_activities, num_gates, weights, shadow_constraints,
+                        flights_to_activities, activities_to_flights, gates_to_indices, large_negative,
+                        sc_per_act_gate_pair, sc_per_gate))
+    score_alg1, score_excl_penalties, no_unassigned_activities = calculate_total_score(refined_solution, weights, large_negative)
+
+    # Algorithm 3
+    final_score, final_score_excl_penalties, final_no_unassigned_activities = eliminate_conflicts_new(refined_solution, M_validGate,
+                        U_successor, activities_to_flights, flights_to_activities, refined_nodes_to_clusters, shadow_constraints,
+                        weights, large_negative, P_preferences, num_activities, num_gates, gates_to_indices, sc_per_act_gate_pair,
+                        sc_per_gate)
+
+    print('=====================')
+    print('=====================')
+    print('=====================')
+    print(f"FINAL SCORE IS: {final_score}, and final amount of unassigned activities is: {final_score_excl_penalties}!!!")
+    print('=====================')
+    print('=====================')
+    print('=====================')
 
     return best_solution, best_score
 
