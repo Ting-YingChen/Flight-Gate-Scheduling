@@ -513,10 +513,11 @@ def refine_clusters(current_solution, nodes_to_clusters, num_activities, num_gat
     best_iterator = list(values_sorted.keys())[0]
     best_solution, best_nodes_to_clusters, best_cluster_contains_gate, best_cluster_to_gates = solution_data_per_iterator[best_iterator]
 
+    Alg1_score = calculate_total_score(best_solution, weights, large_negative)[0]
     Alg1_unass_act = calculate_total_score(best_solution, weights, large_negative)[2]
 
     print(f"~Best reassignment solution found at {best_iterator}th iteration~")
-    print(f'--- I am alg1 and I have {Alg1_unass_act} unassigned activities ---')
+    print(f'--- Alg1: {Alg1_unass_act} u.a., score = {readable_score(Alg1_score)} ---')
 
     return best_solution, best_nodes_to_clusters, best_cluster_contains_gate, best_cluster_to_gates
 
