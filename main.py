@@ -37,28 +37,28 @@ def main(local_path, EstimatedOrReal):
     # FGS MIP Model
 
     # CPP Model
-    start_time = time.time()
-    cpp_solution = cpp.build_cpp_model(weights, shadow_constraints)
-    cpp_duration = time.time() - start_time
-    performance_records['CPP'] = {'duration': cpp_duration, 'solution': cpp_solution}
+    # start_time = time.time()
+    # cpp_solution = cpp.build_cpp_model(weights, shadow_constraints)
+    # cpp_duration = time.time() - start_time
+    # performance_records['CPP'] = {'duration': cpp_duration, 'solution': cpp_solution}
 
     # Heuristic Model
 
     # Iterative Refinement Heuristic Model
-    # sc_per_act_gate_pair, sc_per_gate = Instance.convert_sc_to_dicts(shadow_constraints)
-    #
-    # start_time = time.time()
-    # print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting standard heuristic\n~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    # iterative_refinement_solution, iterative_refinement_score = (
-    #     Heuristic.iterative_refinement_gate_optimization_new(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
-    #                                                      shadow_constraints, num_flights,
-    #                                                      activities_to_flights, gates_to_indices, flights_to_activities,
-    #                                                      large_negative,
-    #                                                      sc_per_act_gate_pair, sc_per_gate))
-    # iterative_refinement_duration = time.time() - start_time
-    # performance_records['Iterative Refinement Heuristic'] = {'duration': iterative_refinement_duration,
-    #                                                          'solution': iterative_refinement_solution}
-    # print(f"Done. Runtime = {time.time() - start_time} seconds.")
+    sc_per_act_gate_pair, sc_per_gate = Instance.convert_sc_to_dicts(shadow_constraints)
+
+    start_time = time.time()
+    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~\nStarting standard heuristic\n~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    iterative_refinement_solution, iterative_refinement_score = (
+        Heuristic.iterative_refinement_gate_optimization_new(num_activities, num_gates, weights, U_successor, M_validGate, P_preferences,
+                                                         shadow_constraints, num_flights,
+                                                         activities_to_flights, gates_to_indices, flights_to_activities,
+                                                         large_negative,
+                                                         sc_per_act_gate_pair, sc_per_gate))
+    iterative_refinement_duration = time.time() - start_time
+    performance_records['Iterative Refinement Heuristic'] = {'duration': iterative_refinement_duration,
+                                                             'solution': iterative_refinement_solution}
+    print(f"Done. Runtime = {time.time() - start_time} seconds.")
 
     # # 2-opt Integrated Heuristic Model
     # start_time = time.time()
@@ -82,7 +82,7 @@ LOCAL_PATH_TingYing = '/Users/chentingying/Documents/tum/AS_Operation_Management
 LOCAL_PATH_Arthur = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels.xlsm'
 LOCAL_PATH_Arthur_light = '/Users/arthurdebelle/Desktop/TUM/SoSe 2024/Ad.S - OM/Project/CODING/Airports data/Brussels (EBBR)/Brussels (less flights).xlsm'
 LOCAL_PATH_Andreas = 'C:/Users/ge92qac/PycharmProjects/Flight-Gate-Scheduling/Brussels.xlsm'
-LOCAL_PATH = LOCAL_PATH_Arthur_light
+LOCAL_PATH = LOCAL_PATH_Arthur
 
 if __name__ == "__main__":
     EstimatedOrReal = "Estimated"

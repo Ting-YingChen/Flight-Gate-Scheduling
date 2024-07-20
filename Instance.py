@@ -12,20 +12,20 @@ def import_data(local_path, EstimatedOrReal):
 
     # T Matrix (Time Differences)
     # Regular instance
-    # T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:PK', header=0, index_col=0)
-    # T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:OD', header=0, index_col=0)
-    # if EstimatedOrReal == "Estimated":
-    #     T_timeDiff = T_timeDiff_Estim
-    # elif EstimatedOrReal == "Real":
-    #     T_timeDiff = T_timeDiff_Real
-
-    # Smaller instance (1/3rd of the flights)
-    T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:EP', header=0, index_col=0)
-    T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:ED', header=0, index_col=0)
+    T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:PK', header=0, index_col=0)
+    T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:OD', header=0, index_col=0)
     if EstimatedOrReal == "Estimated":
         T_timeDiff = T_timeDiff_Estim
     elif EstimatedOrReal == "Real":
         T_timeDiff = T_timeDiff_Real
+
+    # Smaller instance (1/3rd of the flights)
+    # T_timeDiff_Estim = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (estimated)', usecols='A:EP', header=0, index_col=0)
+    # T_timeDiff_Real = pd.read_excel(local_path, sheet_name='EBBR - Tmatrix (real)', usecols='A:ED', header=0, index_col=0)
+    # if EstimatedOrReal == "Estimated":
+    #     T_timeDiff = T_timeDiff_Estim
+    # elif EstimatedOrReal == "Real":
+    #     T_timeDiff = T_timeDiff_Real
 
     # Gates Neighbours and Distances
     Gates_N = pd.read_excel(local_path, sheet_name='EBBR - Gates (next)', usecols='A:DA', header=0, index_col=0, nrows=num_gates)
