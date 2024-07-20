@@ -8,7 +8,7 @@ import Heuristic
 def main(local_path, EstimatedOrReal):
     # 0. define all relevant model parameters
     # Parameters based on experiences
-    alpha1 = 10  # Preference scaling factor
+    alpha1 = 1  # Preference scaling factor
     alpha2 = 3  # Reward for avoiding tows
     alpha3 = 100  # Penalty scaling factor for buffer time deficits
     t_max = 30
